@@ -458,7 +458,7 @@ const VIEWS = {
       <div class="stats">
         <div class="stat"><span class="lbl">Białko</span><span class="num">${p}<small class="mute"> / ${PROTEIN} g</small></span><div class="bar"><i style="width:${Math.min(100, p / PROTEIN * 100)}%"></i></div></div>
         <div class="stat"><span class="lbl">Kalorie</span><span class="num">${k}<small class="mute"> / ${kcalTarget()}</small></span><div class="bar"><i style="width:${Math.min(100, k / kcalTarget() * 100)}%;background:var(--blue)"></i></div></div>
-        <div class="stat" style="justify-content:center"><label class="toggle"><input type="checkbox" id="cr" data-flag="creatine" ${D.creatine ? 'checked' : ''}> Kreatyna 5 g</label><label class="toggle"><input type="checkbox" id="nose" data-flag="nose" ${D.nose ? 'checked' : ''}> 20 min nosem</label></div>
+        <div class="stat" style="justify-content:center"><label class="toggle"><input type="checkbox" id="cr" data-flag="creatine" ${D.creatine ? 'checked' : ''}> Kreatyna 5 g</label><label class="toggle"><input type="checkbox" id="nose" data-flag="nose" ${D.nose ? 'checked' : ''}> Spacer 20 min tylko nosem</label></div>
       </div>
       <div class="card"><div class="row"><span class="lbl grow">Sprzęt dziś</span>${auto}</div>${eqSeg(eq, 'eqday')}<p class="mute">${esc(MODES[eq].focus)}</p></div>
       ${banners(d)}
