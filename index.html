@@ -95,10 +95,13 @@ input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:var(--ok);
 .set.ok input{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
 a{color:var(--blue)}
 
-/* posture */
-.chk{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line)}
-.chk:first-of-type{border-top:0}
-.chk.done h3{color:var(--mute);text-decoration:line-through}
+/* demos */
+svg.demo{width:116px;height:auto;aspect-ratio:6/5;max-width:34%;flex:none;background:var(--sunk);border-radius:10px}
+.dose{font-size:15px;color:var(--mute);margin-top:2px}
+.dose .num{font-size:28px;line-height:1;color:var(--ink)}
+.cue{font-size:15px;margin-top:4px}
+.ex details summary{font-size:14px;color:var(--blue);font-weight:600}
+.ex details ol{margin:6px 0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
 
 /* tables */
 .tw{overflow-x:auto}
@@ -266,6 +269,140 @@ const POSTURE = [
     'Odejdź od ściany i utrzymaj to ustawienie. W ciągu dnia wracaj do niego co godzinę.'] },
 ];
 
+// Saved progress is keyed by these ids (EX keys, POST_IDS, dates). Rename = lost history, so only ever add new ones.
+const POST_IDS = ['br', 'chin', 'thor', 'pec', 'angel', 'pull', 'ytw', 'hip', 'bridge', 'wall']; // order = legacy index keys
+POSTURE.forEach((p, i) => p.id = POST_IDS[i]);
+const postOn = (D, i) => !!(D?.post?.[POST_IDS[i]] ?? D?.post?.[i]);
+
+// ===== DEMOS: stick figure animated between key poses =====
+// side view (faces right): angles in degrees, 0 = up, 90 = forward, 180 = down. T torso (hip→neck), H head,
+// U/F near upper arm/forearm, L/S near thigh/shin; lowercase = far limb (defaults to near). bel = belly breath 0..1.
+// front view: a = arm angle from hanging (90 = out to side, 180 = overhead), e = elbow bend, f = arm foreshortening,
+// suffix L/R per arm (L = viewer's left); tilt leans whole body, ts shortens torso (bent over).
+// anc = [joint, x, y] keeps that joint planted; props: ['rect',x,y,w,h] ['line',x1,y1,x2,y2] ['to',joint,x,y] ['link',j1,j2] ['dot',x,y,r]
+const DEMO = {
+  ohp: { anc: ['hip', 55, 72], seat: [40, 74, 26, 21], db: 1, p: [{ L: 90, S: 180, U: 150, F: 0 }, { L: 90, S: 180, U: 5, F: 5 }] },
+  row1: { anc: ['foot', 62, 95], db: 1, props: [['rect', 88, 80, 18, 15]], p: [{ T: 80, L: 175, l: 200, u: 180, f: 180 }, { T: 80, L: 175, l: 200, u: 180, f: 180, U: -50, F: 185 }] },
+  latlean: { v: 'f', db: 'L', props: [['line', 96, 4, 96, 95]], p: [{ tilt: 12, aL: 8, aR: 62 }, { tilt: 12, aL: 92, eL: 5, aR: 62 }] },
+  rearfly: { v: 'f', ts: .6, db: 1, p: [{ aL: 12, aR: 12, eL: 12, eR: 12 }, { aL: 88, aR: 88, eL: 12, eR: 12 }] },
+  bayes: { anc: ['foot', 60, 95], db: 1, p: [{ U: 200, F: 200, u: 180, f: 180 }, { U: 200, F: 20, u: 180, f: 180 }] },
+  revcr: { anc: ['neck', 32, 89], p: [{ T: -90, H: -90, L: 0, S: 90, U: 90, F: 90 }, { T: -105, H: -95, L: -40, S: 40, U: 90, F: 90 }] },
+  deadbug: { anc: ['neck', 38, 89], p: [{ T: -90, H: -90, U: 0, F: 0, L: 0, S: 90 }, { T: -90, H: -90, U: -80, F: -80, u: 0, f: 0, L: 80, S: 85, l: 0, s: 90 }] },
+  pudef: { anc: ['hand', 82, 91], props: [['rect', 76, 91, 12, 4]], p: [{ T: 62, H: 70, U: 180, F: 180, L: 242, S: 242 }, { T: 84, H: 90, U: 300, F: 170, L: 264, S: 264 }] },
+  rowchest: { anc: ['hip', 50, 58], db: 1, props: [['rect', 10, 61, 70, 34]], p: [{ T: 90, H: 105, L: 270, S: 270 }, { T: 90, H: 105, L: 270, S: 270, U: -40, F: 170 }] },
+  latseat: { v: 'f', seat: 1, db: 1, p: [{ aL: 12, aR: 12, eL: 5, eR: 5 }, { aL: 88, aR: 88, eL: 5, eR: 5 }] },
+  yraise: { anc: ['hip', 38, 90], db: 1, p: [{ T: 90, H: 95, L: 270, S: 270, U: 90, F: 90 }, { T: 90, H: 95, L: 270, S: 270, U: 68, F: 68 }] },
+  ohtri: { anc: ['foot', 60, 95], db: 1, p: [{ U: -5, F: -150, u: 180, f: 180 }, { U: -5, F: -5, u: 180, f: 180 }] },
+  hollow: { anc: ['hip', 70, 90], p: [{ T: -85, H: -80, U: -80, F: -80, L: 82, S: 82 }, { T: -80, H: -75, U: -74, F: -74, L: 74, S: 74 }] },
+  sideplank: { anc: ['elbow', 30, 93], p: [{ T: -60, H: -60, U: 180, F: -90, L: 95, S: 95 }, { T: -76, H: -76, U: 180, F: -90, L: 104, S: 104 }] },
+  rollout: { anc: ['knee', 30, 93], p: [{ T: 70, U: 155, F: 155, L: 170, S: 270 }, { T: 84, U: 100, F: 100, L: 240, S: 270 }] },
+  pike: { anc: ['hand', 80, 93], p: [{ T: 125, H: 150, U: 125, F: 125, L: 205, S: 205 }, { T: 110, H: 170, U: 120, F: 170, L: 205, S: 205 }] },
+  towelrow: { anc: ['foot', 88, 94], props: [['line', 104, 6, 104, 95], ['to', 'hand', 104, 42]], p: [{ T: -40, H: -30, L: 140, S: 140, U: 95, F: 95 }, { T: -28, H: -20, L: 152, S: 152, U: 170, F: 85 }] },
+  towelcurl: { anc: ['foot', 60, 95], props: [['link', 'hand', 'foot']], p: [{ u: 180, f: 180 }, { F: 20, u: 180, f: 180 }] },
+  tablerow: { anc: ['hand', 88, 45], props: [['rect', 76, 39, 42, 5], ['line', 114, 44, 114, 95]], p: [{ T: 80, H: 80, U: 0, F: 0, L: 260, S: 260 }, { T: 59, H: 60, U: 225, F: 20, L: 239, S: 239 }] },
+  dips: { anc: ['hand', 40, 62], props: [['rect', 12, 62, 30, 33]], p: [{ T: 10, U: 180, F: 180, L: 120, S: 165 }, { T: 10, U: 239, F: 145, L: 100, S: 170 }] },
+  bandlat: { v: 'f', props: [['link', 'hL', 'fL']], p: [{ aL: 8, eL: 5 }, { aL: 90, eL: 5 }] },
+  bandpull: { v: 'f', props: [['link', 'hL', 'hR']], p: [{ aL: 90, aR: 90, fL: .25, fR: .25 }, { aL: 90, aR: 90 }] },
+  bandface: { v: 'f', p: [{ aL: 95, aR: 95, fL: .3, fR: .3 }, { aL: 90, aR: 90, eL: 85, eR: 85 }] },
+  pulldown: { v: 'f', seat: 1, props: [['link', 'hL', 'hR'], ['to', 'neck', 60, 0]], p: [{ aL: 165, aR: 165, eL: 10, eR: 10 }, { aL: 100, aR: 100, eL: 75, eR: 75 }] },
+  cablelat: { v: 'f', props: [['to', 'hL', 86, 92]], p: [{ aL: 18, eL: 5 }, { aL: 92, eL: 5 }] },
+  mohp: { v: 'f', seat: 1, db: 1, p: [{ aL: 90, aR: 90, eL: 90, eR: 90 }, { aL: 168, aR: 168, eL: 8, eR: 8 }] },
+  cablerow: { anc: ['hip', 35, 80], seat: [22, 82, 26, 13], props: [['to', 'hand', 118, 66]], p: [{ T: 20, L: 90, S: 90, U: 90, F: 90 }, { T: -5, L: 90, S: 90, U: 200, F: 90 }] },
+  facepull: { v: 'f', props: [['to', 'hL', 60, 2], ['to', 'hR', 60, 2]], p: [{ aL: 95, aR: 95, fL: .3, fR: .3 }, { aL: 90, aR: 90, eL: 85, eR: 85 }] },
+  cablecurl: { anc: ['foot', 60, 95], props: [['to', 'hand', 4, 92]], p: [{ U: 200, F: 200, u: 180, f: 180 }, { U: 200, F: 20, u: 180, f: 180 }] },
+  cablecr: { anc: ['knee', 55, 93], props: [['to', 'hand', 62, 0]], p: [{ T: 15, H: 20, U: 35, F: 215, L: 180, S: 270 }, { T: 105, H: 150, U: 125, F: 305, L: 180, S: 270 }] },
+  hangknee: { anc: ['hand', 60, 6], k: .8, props: [['line', 30, 6, 90, 6]], p: [{ U: 0, F: 0 }, { U: 0, F: 0, T: -8, L: 80, S: 180 }] },
+  inclinedb: { anc: ['hip', 56, 72], db: 1, props: [['line', 60, 76, 24, 54]], p: [{ T: -60, H: -60, U: 200, F: 0, L: 95, S: 180 }, { T: -60, H: -60, U: 0, F: 0, L: 95, S: 180 }] },
+  rowsingle: { anc: ['foot', 55, 95], props: [['to', 'hand', 118, 42]], p: [{ T: 10, U: 90, F: 90, L: 165, l: 200 }, { T: 10, U: 210, F: 80, L: 165, l: 200 }] },
+  reversefly: { v: 'f', seat: 1, p: [{ aL: 90, aR: 90, fL: .25, fR: .25 }, { aL: 90, aR: 90 }] },
+  ohcable: { anc: ['foot', 62, 95], props: [['to', 'hand', 4, 70]], p: [{ T: 20, H: 25, U: 30, F: -120, L: 165, l: 200 }, { T: 20, H: 25, U: 30, F: 30, L: 165, l: 200 }] },
+  // posture
+  br: { anc: ['neck', 30, 89], props: [['line', 87, 50, 87, 95]], p: [{ T: -90, H: -90, L: 0, S: 90, U: 90, F: 90, bel: 0 }, { T: -90, H: -90, L: 0, S: 90, U: 90, F: 90, bel: 1 }] },
+  chin: { anc: ['hip', 52, 112], k: 1.7, p: [{ H: 32 }, { H: -12 }] },
+  thor: { anc: ['hip', 72, 89], props: [['dot', 50, 87, 4]], p: [{ T: -72, H: -65, U: -15, F: -160, L: 30, S: 150 }, { T: -106, H: -115, U: -45, F: -180, L: 30, S: 150 }] },
+  pec: { anc: ['foot', 60, 95], props: [['line', 41, 0, 41, 95]], p: [{ U: -90, F: 0 }, { T: 12, U: -100, F: -10, l: 150, s: 175 }] },
+  angel: { v: 'f', p: [{ aL: 60, aR: 60, eL: 120, eR: 120 }, { aL: 160, aR: 160, eL: 10, eR: 10 }] },
+  pull: { v: 'f', props: [['link', 'hL', 'hR']], p: [{ aL: 90, aR: 90, fL: .25, fR: .25 }, { aL: 90, aR: 90 }] },
+  ytw: { v: 'f', p: [{ aL: 155, aR: 155 }, { aL: 90, aR: 90 }, { aL: 50, aR: 50, eL: 100, eR: 100 }] },
+  hip: { anc: ['knee', 45, 93], p: [{ L: 180, S: 270, l: 100, s: 180 }, { L: 200, S: 270, l: 110, s: 185 }] },
+  bridge: { anc: ['neck', 25, 89], p: [{ T: -90, H: -90, L: 40, S: 160, U: 90, F: 90 }, { T: -120, H: -95, L: 75, S: 170, U: 90, F: 90 }] },
+  wall: { anc: ['foot', 60, 95], props: [['line', 51, 0, 51, 95]], p: [{ T: 6, H: 24, U: 172, F: 172 }, { T: 0, H: 0 }] },
+};
+// fill defaults so every pose names every angle (otherwise interpolation borrows the other pose's value)
+for (const d of Object.values(DEMO)) d.p = d.p.map(p => {
+  if (d.v === 'f') return { aL: 8, aR: 8, eL: 0, eR: 0, fL: 1, fR: 1, tilt: 0, ...p };
+  const q = { T: 0, U: 180, F: 180, L: 180, S: 180, bel: 0, ...p };
+  return { H: q.T, u: q.U, f: q.F, l: q.L, s: q.S, ...q };
+});
+const rad = a => a * Math.PI / 180, vec = (a, l) => [Math.sin(rad(a)) * l, -Math.cos(rad(a)) * l];
+const add = (p, a, l) => { const v = vec(a, l); return [p[0] + v[0], p[1] + v[1]]; };
+function sidePose(p) {
+  const T = p.T ?? 0, U = p.U ?? 180, F = p.F ?? 180, L = p.L ?? 180, S = p.S ?? 180;
+  const hip = [0, 0], neck = add(hip, T, 34), elbow = add(neck, U, 18), knee = add(hip, L, 22), elbow2 = add(neck, p.u ?? U, 18), knee2 = add(hip, p.l ?? L, 22);
+  return { hip, neck, head: add(neck, p.H ?? T, 9), elbow, hand: add(elbow, F, 16), knee, foot: add(knee, S, 21), elbow2, hand2: add(elbow2, p.f ?? F, 16), knee2, foot2: add(knee2, p.s ?? S, 21), belly: add(add(hip, T, 13), T + 90, 3 * (p.bel || 0)) };
+}
+function frontPose(p, d) {
+  const ls = d.seat ? .55 : 1, hy = 95 - 43 * ls, sy = hy - 34 * (p.ts ?? d.ts ?? 1);
+  const j = { fL: [53, 95], fR: [67, 95], kL: [54, 95 - 21 * ls], kR: [66, 95 - 21 * ls], pL: [55, hy], pR: [65, hy], hip: [60, hy], neck: [60, sy], sL: [50, sy], sR: [70, sy], head: [60, sy - 9] };
+  for (const [s, k] of [[-1, 'L'], [1, 'R']]) {
+    const a = rad(p['a' + k] ?? 8), b = a + rad(p['e' + k] ?? 0), f = p['f' + k] ?? 1, sh = j['s' + k];
+    j['e' + k] = [sh[0] + s * Math.sin(a) * 18 * f, sh[1] + Math.cos(a) * 18 * f];
+    j['h' + k] = [j['e' + k][0] + s * Math.sin(b) * 16 * f, j['e' + k][1] + Math.cos(b) * 16 * f];
+  }
+  const t = rad(p.tilt || 0), c = Math.cos(t), sn = Math.sin(t);
+  for (const k in j) { const [x, y] = j[k]; j[k] = [60 + (x - 60) * c + (y - 95) * sn, 95 - (x - 60) * sn + (y - 95) * c]; }
+  return j;
+}
+function lerpPose(a, b, t) {
+  const o = {};
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    const x = a[k] ?? b[k], y = b[k] ?? a[k], dl = ((y - x + 540) % 360) - 180;
+    o[k] = x + (Math.abs(y - x) < 2 ? y - x : dl) * t; // small numbers (f, bel, ts) interpolate directly
+  }
+  return o;
+}
+function demoSvg(id, t) {
+  const d = DEMO[id]; if (!d) return '';
+  const n = d.p.length, seg = t * n, i = Math.floor(seg) % n, raw = seg - Math.floor(seg);
+  const ease = raw < .7 ? .5 - Math.cos(Math.PI * raw / .7) / 2 : 1; // move 70%, hold 30%
+  const p = lerpPose(d.p[i], d.p[(i + 1) % n], ease);
+  const ln = (a, b, c = 'var(--ink)', w = 4) => a && b ? `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>` : '';
+  let j, body = '';
+  if (d.v === 'f') {
+    j = frontPose(p, d);
+    body = ln(j.fL, j.kL) + ln(j.kL, j.pL) + ln(j.fR, j.kR) + ln(j.kR, j.pR) + ln(j.pL, j.pR) + ln(j.hip, j.neck) + ln(j.sL, j.sR)
+      + ln(j.sL, j.eL) + ln(j.eL, j.hL) + ln(j.sR, j.eR) + ln(j.eR, j.hR) + `<circle cx="${j.head[0].toFixed(1)}" cy="${j.head[1].toFixed(1)}" r="6" fill="var(--ink)"/>`;
+    if (d.seat) body = `<rect x="46" y="${(j.hip[1] + 2).toFixed(0)}" width="28" height="5" rx="2" fill="var(--line)"/>` + body;
+    if (d.db) body += (d.db === 'L' ? ['hL'] : ['hL', 'hR']).map(h => `<rect x="${(j[h][0] - 5).toFixed(1)}" y="${(j[h][1] - 2).toFixed(1)}" width="10" height="4" rx="1.5" fill="var(--blue)"/>`).join('');
+  } else {
+    const r = sidePose(p), k = d.k || 1, an = r[d.anc[0]], dx = d.anc[1] - an[0] * k, dy = d.anc[2] - an[1] * k;
+    j = {}; for (const q in r) j[q] = [r[q][0] * k + dx, r[q][1] * k + dy];
+    const far = 'color-mix(in srgb,var(--ink) 40%,transparent)', w = 4 * k;
+    body = ln(j.hip, j.knee2, far, w) + ln(j.knee2, j.foot2, far, w) + ln(j.neck, j.elbow2, far, w) + ln(j.elbow2, j.hand2, far, w)
+      + (p.bel ? `<circle cx="${j.belly[0].toFixed(1)}" cy="${j.belly[1].toFixed(1)}" r="${(2 + 4 * p.bel).toFixed(1)}" fill="color-mix(in srgb,var(--blue) 35%,transparent)"/>` : '')
+      + ln(j.hip, j.neck, 'var(--ink)', w) + ln(j.hip, j.knee, 'var(--ink)', w) + ln(j.knee, j.foot, 'var(--ink)', w) + ln(j.neck, j.elbow, 'var(--ink)', w) + ln(j.elbow, j.hand, 'var(--ink)', w)
+      + `<circle cx="${j.head[0].toFixed(1)}" cy="${j.head[1].toFixed(1)}" r="${6 * k}" fill="var(--ink)"/>`;
+    if (d.seat) body = `<rect x="${d.seat[0]}" y="${d.seat[1]}" width="${d.seat[2]}" height="${d.seat[3]}" rx="2" fill="var(--line)"/>` + body;
+    if (d.db) body += ['hand', 'hand2'].map(h => `<circle cx="${j[h][0].toFixed(1)}" cy="${j[h][1].toFixed(1)}" r="3.5" fill="var(--blue)"/>`).join('');
+  }
+  const props = (d.props || []).map(q => q[0] === 'rect' ? `<rect x="${q[1]}" y="${q[2]}" width="${q[3]}" height="${q[4]}" rx="2" fill="var(--line)"/>`
+    : q[0] === 'line' ? ln([q[1], q[2]], [q[3], q[4]], 'var(--line)', 3)
+    : q[0] === 'dot' ? `<circle cx="${q[1]}" cy="${q[2]}" r="${q[3]}" fill="var(--line)"/>`
+    : q[0] === 'to' ? ln(j[q[1]], [q[2], q[3]], 'var(--amber)', 1.5)
+    : ln(j[q[1]], j[q[2]], 'var(--amber)', 1.5)).join('');
+  return `<line x1="0" y1="95.5" x2="120" y2="95.5" stroke="var(--line)" stroke-width="1"/>${props}${body}`;
+}
+const demoBox = id => DEMO[id] ? `<svg class="demo" data-demo="${id}" viewBox="0 0 120 100" role="img" aria-label="Animacja ruchu">${demoSvg(id, 0)}</svg>` : '';
+// animate only demos on screen
+const onScreen = new Set();
+const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? onScreen.add(e.target) : onScreen.delete(e.target))) : null;
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function watchDemos() { onScreen.clear(); io?.disconnect(); document.querySelectorAll('svg.demo').forEach(s => io?.observe(s)); }
+(function frame(ms) {
+  if (!still) for (const s of onScreen) if (s.isConnected) { const n = DEMO[s.dataset.demo].p.length; s.innerHTML = demoSvg(s.dataset.demo, (ms / 1600 / n) % 1); }
+  requestAnimationFrame(frame);
+})(0);
+
 // [name, protein g, kcal]
 const FOODS = [['Jajko', 6, 75], ['Skyr 150 g', 17, 95], ['Twaróg chudy 100 g', 18, 99], ['Serek wiejski 200 g', 22, 190], ['Kurczak 100 g', 31, 165], ['Tuńczyk puszka', 26, 120], ['Mleko 250 ml', 8, 125], ['Odżywka 30 g', 23, 120], ['Ser żółty 30 g', 8, 105], ['Szynka 50 g', 9, 55], ['Wołowina mielona 100 g', 20, 250], ['Łosoś 100 g', 22, 200], ['Owsianka 60 g', 8, 230], ['Masło orzechowe 30 g', 8, 180], ['Chleb 2 kromki', 6, 160], ['Ryż 100 g suchy', 7, 350], ['Makaron 100 g suchy', 12, 350], ['Banan', 1, 105], ['Obiad mięso + ryż', 35, 700], ['Tofu 100 g', 12, 120]];
 
@@ -274,7 +411,6 @@ const NOTES = {
   breathing: [
     'Przyczyny: niedrożny nos (skrzywiona przegroda, przerost małżowin, alergia, polipy), nawyk, wysunięta głowa i nisko leżący język.',
     'Laryngolog, jeśli jedna strona nosa jest stale zatkana, chrapiesz, budzisz się z suchymi ustami albo przez nos nie da się oddychać nawet w spoczynku. Test na alergię i sterydowy spray do nosa często dużo dają.',
-    'Spacery i rozgrzewka tylko nosem. Jak musisz otworzyć usta, zwolnij.',
     'Język cały przyklejony do podniebienia, usta zamknięte, zęby lekko rozchylone.',
     'Test BOLT co 2 tygodnie (zakładka Postępy). Poniżej 20 s = oddychasz za dużo.',
     'Płukanie nosa solą na noc.',
@@ -361,7 +497,7 @@ function hint(x, d, eq) {
 const protein = d => (DAYS[d]?.food || []).reduce((a, f) => a + (+f.p || 0), 0);
 const kcal = d => (DAYS[d]?.food || []).reduce((a, f) => a + (+f.k || 0), 0);
 const kcalTarget = () => KCAL_BASE + (SET.kcalAdj || 0);
-const postureDone = D => Object.values(D?.post || {}).filter(Boolean).length >= POSTURE.length - 2;
+const postureDone = D => POSTURE.filter((_, i) => postOn(D, i)).length >= POSTURE.length - 2;
 function avgW(from, to) {
   const v = Object.keys(DAYS).filter(k => k >= from && k <= to && DAYS[k].w).map(k => +DAYS[k].w);
   return v.length >= 3 ? v.reduce((a, b) => a + b, 0) / v.length : null;
@@ -426,7 +562,7 @@ function cleanDay(v) {
   if (num(v.w)) o.w = num(v.w);
   if (num(v.bolt)) o.bolt = num(v.bolt);
   if (Array.isArray(v.food)) o.food = v.food.map(f => ({ n: String(f?.n ?? '').slice(0, 80), p: num(f?.p) || 0, k: num(f?.k) || 0 }));
-  if (v.post && typeof v.post === 'object') o.post = Object.fromEntries(Object.entries(v.post).filter(([k]) => /^\d+$/.test(k)).map(([k, b]) => [k, !!b]));
+  if (v.post && typeof v.post === 'object') o.post = Object.fromEntries(Object.entries(v.post).filter(([k]) => /^[\w-]+$/.test(k)).map(([k, b]) => [k, !!b]));
   if (v.sets && typeof v.sets === 'object') o.sets = Object.fromEntries(Object.entries(v.sets).filter(([k, a]) => k in EX && Array.isArray(a)).map(([k, a]) => [k, a.map(s => ({ w: num(s?.w), r: num(s?.r), ok: !!s?.ok }))]));
   return o;
 }
@@ -479,6 +615,7 @@ function render() {
   document.getElementById('nav').innerHTML = Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}" class="${ui.tab === k ? 'sel' : ''}">${v}</button>`).join('');
   document.getElementById('app').innerHTML = VIEWS[ui.tab]();
   tickTimer();
+  watchDemos();
 }
 const eqSeg = (cur, attr) => `<div class="seg" role="group">${Object.entries(MODES).map(([k, m]) => `<button data-${attr}="${k}" class="${cur === k ? 'sel' : ''}"><span class="dot eq-${k}"></span>${m.label}</button>`).join('')}</div>`;
 
@@ -508,21 +645,17 @@ const VIEWS = {
       <div class="stats">
         <div class="stat"><span class="lbl">Białko</span><span class="num">${p}<small class="mute"> / ${PROTEIN} g</small></span><div class="bar"><i style="width:${Math.min(100, p / PROTEIN * 100)}%"></i></div></div>
         <div class="stat"><span class="lbl">Kalorie</span><span class="num">${k}<small class="mute"> / ${kcalTarget()}</small></span><div class="bar"><i style="width:${Math.min(100, k / kcalTarget() * 100)}%;background:var(--blue)"></i></div></div>
-        <div class="stat" style="justify-content:center"><label class="toggle"><input type="checkbox" id="cr" data-flag="creatine" ${D.creatine ? 'checked' : ''}> Kreatyna 5 g</label><label class="toggle"><input type="checkbox" id="nose" data-flag="nose" ${D.nose ? 'checked' : ''}> Spacer 20 min tylko nosem</label><span class="mute" style="font-size:12px">Usta zamknięte, tempo takie, żeby nie musieć ich otwierać</span></div>
+        <div class="stat" style="justify-content:center"><label class="toggle"><input type="checkbox" id="cr" data-flag="creatine" ${D.creatine ? 'checked' : ''}> Kreatyna 5 g</label></div>
       </div>
       <div class="card"><div class="row"><span class="lbl grow">Sprzęt dziś</span>${auto}</div>${eqSeg(eq, 'eqday')}<p class="mute">${esc(MODES[eq].focus)}</p></div>
       ${banners(d)}
+      ${postureCard(D, isTrain)}
       ${isTrain ? `<div class="card">
         <div class="row"><div class="grow"><span class="lbl">Trening</span><div class="mute">${esc(eq === 'bw' ? '0–1 powt. w zapasie (małe obciążenie)' : ph.rir)}</div></div>
           <div class="seg"><button data-ses="A" class="${ses === 'A' ? 'sel' : ''}">A</button><button data-ses="B" class="${ses === 'B' ? 'sel' : ''}">B</button></div>
           <div class="seg"><button data-quick="0" class="${!ui.quick ? 'sel' : ''}">Pełny</button><button data-quick="1" class="${ui.quick ? 'sel' : ''}">15 min</button></div></div>
         ${list.map(x => exCard(x, d, eq)).join('')}
-      </div>` : `<div class="card"><p>Dziś odpoczynek: postura i spacer nosem. Mięśnie rosną między treningami.</p><button data-force="1">Pokaż trening mimo to</button></div>`}
-      <div class="card"><div class="row"><span class="lbl grow">Postura · codziennie ~8 min</span><span class="mute tn">${Object.values(D.post || {}).filter(Boolean).length}/${POSTURE.length}</span></div>
-        ${POSTURE.map((x, i) => `<div class="chk ${D.post?.[i] ? 'done' : ''}"><input type="checkbox" id="po${i}" data-post="${i}" ${D.post?.[i] ? 'checked' : ''}><div class="grow"><label for="po${i}"><h3>${esc(x.n)} <span class="pill">${esc(x.t)}</span></h3></label><div class="mute">${esc(x.cue)}</div>
-          <details><summary class="mute" style="font-weight:600;margin-top:4px">Jak to zrobić</summary><ol style="margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px">${x.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
-          <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(x.en)}" target="_blank" rel="noopener" style="font-size:14px;display:inline-block;margin-top:6px">Zobacz film</a></details></div></div>`).join('')}
-      </div>
+      </div>` : `<div class="card"><p>Dziś odpoczynek, zrób tylko posturę. Mięśnie rosną między treningami.</p><button data-force="1">Pokaż trening mimo to</button></div>`}
       <div class="sync" id="sync">${esc(syncMsg)}</div>
     </div>`;
   },
@@ -633,6 +766,17 @@ const VIEWS = {
   },
 };
 
+function postureCard(D, isTrain) {
+  const done = POSTURE.filter((_, i) => postOn(D, i)).length;
+  return `<div class="card"><div class="row"><span class="lbl grow">${isTrain ? 'Rozgrzewka: postura · ~8 min' : 'Postura · codziennie ~8 min'}</span><span class="mute tn">${done}/${POSTURE.length}</span></div>
+    ${POSTURE.map((x, i) => `<div class="ex ${postOn(D, i) ? 'done' : ''}"><div class="exh">${demoBox(x.id)}<div class="grow">
+      <label class="row" style="gap:8px;flex-wrap:nowrap;align-items:flex-start;cursor:pointer"><input type="checkbox" id="po-${x.id}" data-post="${x.id}" ${postOn(D, i) ? 'checked' : ''} style="margin-top:2px"><h3>${esc(x.n)}</h3></label>
+      <div class="dose"><span class="num">${esc(x.t)}</span></div><p class="cue">${esc(x.cue)}</p></div></div>
+      <details><summary>Jak to zrobić</summary><ol>${x.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+        <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(x.en)}" target="_blank" rel="noopener" style="font-size:14px">Zobacz film</a></details></div>`).join('')}
+  </div>`;
+}
+
 function exCard(x, d, eq) {
   const e = EX[x], D = DAYS[d] || {}, cur = D.sets?.[x] || [], n = setsFor(x, d), last = lastEntry(x, d);
   const kg = !!e.kg && eq !== 'bw';
@@ -646,9 +790,12 @@ function exCard(x, d, eq) {
       <button data-ok="${x}" data-i="${i}" aria-label="Seria ${i + 1} zrobiona">✓</button></div>`;
   }).join('');
   return `<div class="ex ${done ? 'done' : ''}">
-    <div class="exh"><div class="grow"><h3>${esc(e.n)}</h3><div class="row" style="gap:6px;margin-top:4px"><span class="pill">${n} × ${esc(e.r)} ${u}</span><span class="pill">przerwa ${e.rest} s</span>${e.core ? '<span class="pill">priorytet</span>' : ''}</div></div>
-      <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(e.en + ' form')}" target="_blank" rel="noopener" class="mute" style="font-size:13px;white-space:nowrap">Jak to robić</a></div>
-    <p class="mute">${esc(e.how)} ${esc(e.cue)}</p>
+    <div class="exh">${demoBox(x)}<div class="grow"><h3>${esc(e.n)}</h3>
+      <div class="dose"><span class="num">${n} × ${esc(e.r.replace('-', '–'))}</span> <span>${e.unit === 's' ? 'sekund' : 'powtórzeń'}</span></div>
+      <div class="mute">przerwa ${e.rest} s${e.core ? ' · <b style="color:var(--ink)">priorytet</b>' : ''}</div>
+      <p class="cue">${esc(e.cue)}</p></div></div>
+    <details><summary>Jak to zrobić</summary><p style="margin-top:6px">${esc(e.how)}</p>${e.harder ? `<p class="mute">Za łatwo? ${esc(e.harder)}.</p>` : ''}
+      <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(e.en + ' form')}" target="_blank" rel="noopener" style="font-size:14px">Zobacz film</a></details>
     <div class="hint">${esc(hint(x, d, eq))}</div>
     <div class="sets">${rows}</div>
   </div>`;
@@ -723,5 +870,5 @@ render();
 initDb();
 </script>
 
-<script>if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
+<script>if ('serviceWorker' in navigator && location.protocol.startsWith('http')) { navigator.serviceWorker.register('sw.js').catch(() => {}); let r = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (!r && navigator.serviceWorker.controller) { r = true; location.reload(); } }); }</script>
 </body></html>
