@@ -142,8 +142,7 @@ nav button.sel{color:var(--blue);background:none}
 
 <script>
 // ===== PROGRAM =====
-const START = '2026-10-06', DAYS_TOTAL = 90, KCAL_BASE = 2850, PROTEIN = 130;
-const TRAIN_DAYS = [1, 2, 4, 5]; // Mon Tue Thu Fri
+const START = '2026-10-07', DAYS_TOTAL = 90, KCAL_BASE = 2850, PROTEIN = 130;
 
 // kg: logs weight · unit:'s' = seconds instead of reps · core: kept in the 15-min version
 const EX = {
@@ -209,16 +208,62 @@ const PHASES = [
 ];
 
 const POSTURE = [
-  { n: 'Oddychanie 90/90', t: '60 s', cue: 'Leżąc, stopy na ścianie. Wdech nosem, długi wydech ustami, żebra w dół.' },
-  { n: 'Retrakcje brody', t: '10 × 5 s', cue: 'Zrób podwójny podbródek, tył szyi się wydłuża, wzrok poziomo.' },
-  { n: 'Wyprost piersiowy na ręczniku', t: '90 s', cue: 'Zrolowany ręcznik pod łopatkami, ręce za głową, odchyl się na 3 wysokościach.' },
-  { n: 'Rozciąganie klatki w futrynie', t: '2 × 30 s', cue: 'Przedramię na futrynie, krok w przód, bark nie ucieka do przodu.' },
-  { n: 'Anioły przy ścianie', t: '2 × 8', cue: 'Pięty, pośladki, łopatki i głowa przy ścianie, lędźwia lekko dociśnięte.' },
-  { n: 'Pull-apart z gumą', t: '2 × 15', cue: 'Ręce proste przed sobą, rozciągnij gumę do klatki. Łopatki do siebie i w dół.' },
-  { n: 'Y-T-W na brzuchu', t: '8 każdej', cue: 'Czoło na ręczniku, ruch z łopatek, 2 s pauzy na górze.' },
-  { n: 'Zginacz biodra w półklęku', t: '30 s / str.', cue: 'Ustawia miednicę, to nie trening nóg. Podwiń pośladek, nie wyginaj lędźwi.' },
-  { n: 'Mostek biodrowy', t: '12', cue: 'Ustawia miednicę. Wydech, żebra w dół, ściśnij pośladki.' },
-  { n: 'Kontrola postawy przy ścianie', t: '30 s', cue: 'Zapamiętaj to ustawienie i resetuj je co godzinę przy biurku.' },
+  { n: 'Oddychanie 90/90', t: '5 oddechów', en: '90 90 breathing', cue: 'Uczy oddychać przeponą i ustawia żebra nad miednicą.', steps: [
+    'Połóż się na plecach, stopy płasko na ścianie. Biodra i kolana zgięte pod kątem prostym.',
+    'Lekko dociśnij stopy do ściany. Lędźwia przylegają do podłogi.',
+    'Wdech NOSEM przez 4 s. Rozszerza się brzuch i boki żeber, a klatka nie idzie do góry.',
+    'Wydech ustami przez 6–8 s, jakbyś powoli dmuchał w balon. Żebra opadają w dół.',
+    'Pauza 2 s i od nowa. 5 spokojnych oddechów.'] },
+  { n: 'Retrakcje brody', t: '10 × 5 s', en: 'chin tuck exercise', cue: 'Na wysuniętą głowę.', steps: [
+    'Usiądź albo stań prosto, wzrok poziomo przed siebie.',
+    'Cofnij głowę poziomo do tyłu, jakby ktoś pchał cię palcem w brodę. Nie patrz w dół.',
+    'Zrobi się podwójny podbródek, a tył szyi się wydłuży. Tak ma być.',
+    'Trzymaj 5 s, puść. 10 razy.',
+    'Łatwiejsza wersja: leżąc na plecach, dociśnij tył głowy do podłogi.'] },
+  { n: 'Wyprost piersiowy na ręczniku', t: '3 pozycje', en: 'thoracic extension towel roll', cue: 'Na garb: odcina górne plecy z pozycji zgarbionej.', steps: [
+    'Zroluj ciasno ręcznik albo owiń nim butelkę.',
+    'Połóż się na plecach tak, żeby ręcznik leżał w poprzek pod dolnymi łopatkami. Pośladki na podłodze.',
+    'Dłonie za głową, łokcie razem do przodu. Ręce trzymają głowę.',
+    'Powoli odchyl się do tyłu przez ręcznik. 3 spokojne oddechy, wydech rozluźnia.',
+    'Przesuń ręcznik 3–4 cm wyżej i powtórz. Razem 3 pozycje. Nigdy pod lędźwiami.'] },
+  { n: 'Rozciąganie klatki w futrynie', t: '30 s / str.', en: 'doorway pec stretch', cue: 'Spięta klatka ciągnie barki do przodu.', steps: [
+    'Stań w drzwiach. Przedramię oprzyj pionowo o futrynę, łokieć na wysokości barku.',
+    'Zrób mały krok do przodu nogą po tej samej stronie.',
+    'Poczujesz rozciąganie z przodu klatki i barku. Bark trzymaj nisko i z tyłu.',
+    '30 s spokojnego oddechu, potem druga strona.'] },
+  { n: 'Anioły przy ścianie', t: '2 × 8', en: 'wall angels exercise', cue: 'Uczy łopatki pracować przy prostych plecach.', steps: [
+    'Stań plecami do ściany, stopy ~10 cm od niej, kolana lekko ugięte.',
+    'Pośladki, łopatki i tył głowy dotykają ściany. Broda lekko cofnięta, lędźwia blisko ściany.',
+    'Ręce w kształt litery W: łokcie i grzbiety dłoni przy ścianie.',
+    'Powoli przesuwaj ręce w górę do Y, nie odrywając od ściany łokci, nadgarstków ani lędźwi. Potem wróć do W.',
+    'Coś się odrywa? Zmniejsz zakres. Na początku to normalne.'] },
+  { n: 'Pull-apart z gumą', t: '2 × 15', en: 'band pull apart', cue: 'Wzmacnia mięśnie, które trzymają barki z tyłu.', steps: [
+    'Złap gumę na szerokość barków. Ręce proste przed sobą, na wysokości barków.',
+    'Rozciągaj gumę na boki, aż dotknie klatki. Ruch idzie z łopatek.',
+    'Na końcu łopatki ściągnięte do siebie i w dół, barki daleko od uszu.',
+    'Wracaj powoli przez 2–3 s. Za łatwo? Złap węziej.'] },
+  { n: 'Y-T-W na brzuchu', t: '8 każdej', en: 'prone y t w raise', cue: 'Na garb i barki z przodu.', steps: [
+    'Połóż się na brzuchu. Czoło na zwiniętym ręczniku, szyja prosto.',
+    'Y: ręce proste w przód pod skosem, kciuki w górę. Unieś je kilka cm, 2 s pauzy. 8 razy.',
+    'T: ręce na boki, kciuki w górę. Unieś, 2 s. 8 razy.',
+    'W: łokcie zgięte, dłonie przy uszach. Ściągnij łopatki i unieś łokcie, 2 s. 8 razy.',
+    'Mały zakres, ruch z łopatek. Głowa i klatka zostają na podłodze.'] },
+  { n: 'Zginacz biodra w półklęku', t: '30 s / str.', en: 'half kneeling hip flexor stretch', cue: 'Ustawia miednicę, przez co brzuch mniej wystaje. To nie trening nóg.', steps: [
+    'Klęknij na jedno kolano (podłóż poduszkę), druga stopa przed tobą.',
+    'Napnij pośladek po stronie klęczącego kolana i podwiń miednicę, jakbyś chował ogon.',
+    'Powoli przesuń biodra trochę do przodu, aż poczujesz rozciąganie z przodu biodra.',
+    'Tułów prosto, bez wyginania lędźwi. 30 s, potem druga strona.'] },
+  { n: 'Mostek biodrowy', t: '12', en: 'glute bridge', cue: 'Ustawia miednicę, przez co brzuch mniej wystaje.', steps: [
+    'Leż na plecach, kolana zgięte, stopy na szerokość bioder blisko pośladków.',
+    'Wydech, żebra w dół, lekko podwiń miednicę.',
+    'Wypchnij biodra w górę pośladkami, aż kolana, biodra i barki będą w jednej linii.',
+    '2 s ściskania na górze, bez przeginania lędźwi. Powoli w dół. 12 razy.'] },
+  { n: 'Kontrola postawy przy ścianie', t: '30 s', en: 'wall posture check', cue: 'Uczy ciało, jak wygląda prosta postawa.', steps: [
+    'Stań plecami do ściany, pięty ~5 cm od niej.',
+    'Pośladki, łopatki i tył głowy dotykają ściany, broda lekko cofnięta.',
+    'Między lędźwiami a ścianą mieści się płasko dłoń, nie więcej.',
+    'Oddychaj spokojnie 30 s i zapamiętaj to uczucie.',
+    'Odejdź od ściany i utrzymaj to ustawienie. W ciągu dnia wracaj do niego co godzinę.'] },
 ];
 
 // [name, protein g, kcal]
@@ -260,7 +305,6 @@ const today = () => iso(new Date());
 const at = d => new Date(d + 'T12:00:00');
 const addDays = (d, n) => iso(new Date(at(d).getTime() + n * 864e5));
 const dayNum = d => Math.round((at(d) - at(START)) / 864e5) + 1;
-const wd = d => at(d).getDay();
 const weekOf = d => Math.ceil(Math.min(Math.max(dayNum(d), 1), DAYS_TOTAL) / 7);
 const phaseOf = d => PHASES.find(p => weekOf(d) >= p.w[0] && weekOf(d) <= p.w[1]) || PHASES.at(-1);
 const fmt = d => d.slice(8, 10) + '.' + d.slice(5, 7);
@@ -284,6 +328,12 @@ function eqFor(d) {
   return t ? t.eq : 'db';
 }
 const trained = D => !!D && Object.values(D.sets || {}).some(a => a.some(s => s?.ok));
+// Train unless 4 sessions already in the last 7 days or 2 days in a row; a missed session rolls to the next day.
+function trainToday(d) {
+  if (trained(DAYS[d])) return true;
+  const last6 = [1, 2, 3, 4, 5, 6].filter(i => trained(DAYS[addDays(d, -i)])).length;
+  return last6 < 4 && !(trained(DAYS[addDays(d, -1)]) && trained(DAYS[addDays(d, -2)]));
+}
 function sessionFor(d) {
   if (DAYS[d]?.ses) return DAYS[d].ses;
   const prev = Object.keys(DAYS).filter(k => k < d && DAYS[k].ses && trained(DAYS[k])).sort().at(-1);
@@ -446,7 +496,7 @@ function banners(d) {
 const VIEWS = {
   dzis() {
     const d = today(), n = dayNum(d), D = DAYS[d] || {}, eq = eqFor(d), ph = phaseOf(d);
-    const ses = sessionFor(d), isTrain = TRAIN_DAYS.includes(wd(d)) || trained(D) || ui.force;
+    const ses = sessionFor(d), isTrain = trainToday(d) || ui.force;
     let list = PLANS[eq][ses]; if (ui.quick) list = list.filter(x => EX[x].core);
     const p = protein(d), k = kcal(d);
     const pre = n < 1 ? `<div class="note"><b>Start ${fmt(START)}</b>Plan rusza za ${1 - n} dni.</div>` : n > DAYS_TOTAL ? '<div class="note"><b>90 dni za tobą</b>Zrób zdjęcia porównawcze i sprawdź Postępy.</div>' : '';
@@ -458,7 +508,7 @@ const VIEWS = {
       <div class="stats">
         <div class="stat"><span class="lbl">Białko</span><span class="num">${p}<small class="mute"> / ${PROTEIN} g</small></span><div class="bar"><i style="width:${Math.min(100, p / PROTEIN * 100)}%"></i></div></div>
         <div class="stat"><span class="lbl">Kalorie</span><span class="num">${k}<small class="mute"> / ${kcalTarget()}</small></span><div class="bar"><i style="width:${Math.min(100, k / kcalTarget() * 100)}%;background:var(--blue)"></i></div></div>
-        <div class="stat" style="justify-content:center"><label class="toggle"><input type="checkbox" id="cr" data-flag="creatine" ${D.creatine ? 'checked' : ''}> Kreatyna 5 g</label><label class="toggle"><input type="checkbox" id="nose" data-flag="nose" ${D.nose ? 'checked' : ''}> Spacer 20 min tylko nosem</label></div>
+        <div class="stat" style="justify-content:center"><label class="toggle"><input type="checkbox" id="cr" data-flag="creatine" ${D.creatine ? 'checked' : ''}> Kreatyna 5 g</label><label class="toggle"><input type="checkbox" id="nose" data-flag="nose" ${D.nose ? 'checked' : ''}> Spacer 20 min tylko nosem</label><span class="mute" style="font-size:12px">Usta zamknięte, tempo takie, żeby nie musieć ich otwierać</span></div>
       </div>
       <div class="card"><div class="row"><span class="lbl grow">Sprzęt dziś</span>${auto}</div>${eqSeg(eq, 'eqday')}<p class="mute">${esc(MODES[eq].focus)}</p></div>
       ${banners(d)}
@@ -469,7 +519,9 @@ const VIEWS = {
         ${list.map(x => exCard(x, d, eq)).join('')}
       </div>` : `<div class="card"><p>Dziś odpoczynek: postura i spacer nosem. Mięśnie rosną między treningami.</p><button data-force="1">Pokaż trening mimo to</button></div>`}
       <div class="card"><div class="row"><span class="lbl grow">Postura · codziennie ~8 min</span><span class="mute tn">${Object.values(D.post || {}).filter(Boolean).length}/${POSTURE.length}</span></div>
-        ${POSTURE.map((x, i) => `<label class="chk ${D.post?.[i] ? 'done' : ''}"><input type="checkbox" id="po${i}" data-post="${i}" ${D.post?.[i] ? 'checked' : ''}><div class="grow"><h3>${esc(x.n)} <span class="pill">${esc(x.t)}</span></h3><div class="mute">${esc(x.cue)}</div></div></label>`).join('')}
+        ${POSTURE.map((x, i) => `<div class="chk ${D.post?.[i] ? 'done' : ''}"><input type="checkbox" id="po${i}" data-post="${i}" ${D.post?.[i] ? 'checked' : ''}><div class="grow"><label for="po${i}"><h3>${esc(x.n)} <span class="pill">${esc(x.t)}</span></h3></label><div class="mute">${esc(x.cue)}</div>
+          <details><summary class="mute" style="font-weight:600;margin-top:4px">Jak to zrobić</summary><ol style="margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px">${x.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+          <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(x.en)}" target="_blank" rel="noopener" style="font-size:14px;display:inline-block;margin-top:6px">Zobacz film</a></details></div></div>`).join('')}
       </div>
       <div class="sync" id="sync">${esc(syncMsg)}</div>
     </div>`;
@@ -548,7 +600,6 @@ const VIEWS = {
       const x = addDays(START, i);
       return `<div class="eq-${eqFor(x)} ${i + 1 === n ? 't' : ''} ${trained(DAYS[x]) ? 'd' : ''}" style="border-bottom-color:${eqFor(x) === 'db' ? 'transparent' : 'var(--c)'}" title="${fmt(x)} · ${MODES[eqFor(x)].label}">${i + 1}</div>`;
     }).join('');
-    const wdn = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
     return `<div class="stack">
       <div><div class="lbl">${fmt(START)}.2026 → ${fmt(addDays(START, DAYS_TOTAL - 1))}.2027</div><h1>Plan 90 dni</h1></div>
       <div class="card"><span class="lbl">Wyjazdy i sprzęt</span>
@@ -568,8 +619,11 @@ const VIEWS = {
       <div class="card"><span class="lbl">Kalendarz</span><div class="cal">${cells}</div>
         <div class="legend"><span><span class="dot" style="background:var(--ok)"></span>trening zrobiony</span><span><span class="dot eq-bw"></span>bez sprzętu</span><span><span class="dot eq-gym"></span>siłownia</span></div></div>
       <div class="card"><span class="lbl">Diagnoza</span><p>${esc(NOTES.assess)}</p></div>
-      <div class="card"><span class="lbl">Tydzień</span><div class="tw"><table>${[1, 2, 3, 4, 5, 6, 0].map(w => `<tr><td>${wdn[w]}</td><td>${TRAIN_DAYS.includes(w) ? 'Trening (A i B na zmianę)' : 'Wolne: postura + spacer nosem'}</td></tr>`).join('')}</table></div>
-        <p class="mute">Opuściłeś dzień? Nie szkodzi. Apka zawsze daje następny trening z kolejki, a nie ten z kalendarza.</p></div>
+      <div class="card"><span class="lbl">Jak apka wybiera dni</span><ul>
+        <li>Cel: 4 treningi na 7 dni, A i B na zmianę. Postura codziennie.</li>
+        <li>Dziś jest trening, jeśli w ostatnich 7 dniach zrobiłeś mniej niż 4 i nie trenowałeś 2 dni z rzędu. Po 2 dniach z rzędu jest wolne, bo mięśnie rosną w przerwie.</li>
+        <li>Opuściłeś trening? Przechodzi na jutro, więc nadrabiasz automatycznie.</li>
+        <li>„Pokaż trening mimo to” daje następny trening z kolejki. Jak go zrobisz, liczy się normalnie. Nic się nie nadpisuje i nie zawyża postępu.</li></ul></div>
       <div class="card"><span class="lbl">Fazy</span>${PHASES.map(p => `<div><h3>${esc(p.name)} <span class="mute">tydz. ${p.w[0]}${p.w[1] > p.w[0] ? '–' + p.w[1] : ''}</span></h3><p class="mute">${esc(p.rir)}. ${esc(p.desc)}</p></div>`).join('')}</div>
       <div class="card"><details><summary>Wyjazd: jak wycisnąć maksimum</summary><ul style="margin-top:8px">${NOTES.travel.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details></div>
       <div class="card"><details><summary>Oddychanie nosem</summary><ul style="margin-top:8px">${NOTES.breathing.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details></div>
@@ -660,6 +714,10 @@ document.addEventListener('submit', e => {
   }
   render();
 });
+
+// app left open overnight: show the new day when it comes back to front
+let shownDay = today();
+document.addEventListener('visibilitychange', () => { if (!document.hidden && today() !== shownDay) { shownDay = today(); ui.force = false; render(); } });
 
 render();
 initDb();

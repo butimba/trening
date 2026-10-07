@@ -1,4 +1,4 @@
-const C = 'trening-74188bb3', FILES = ['./', 'index.html', 'manifest.json', 'icon.png'];
+const C = 'trening-e2e216c1', FILES = ['./', 'index.html', 'manifest.json', 'icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(C).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== C).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener('fetch', e => {
