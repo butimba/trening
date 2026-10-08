@@ -93,6 +93,7 @@ input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:var(--ok);
 .set button{padding:0;min-height:44px;font-size:18px}
 .set.ok .ok{background:var(--ok);border-color:var(--ok);color:var(--surface)}
 .set.ok input{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
+textarea{font:inherit;color:inherit;width:100%;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical}
 .wrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px}
 .wrow input{width:84px;text-align:center;font-size:18px;font-weight:600}
 .setbar{display:flex;flex-direction:column;gap:2px;background:var(--sunk);border-left:4px solid var(--blue);border-radius:0 8px 8px 0;padding:8px 12px;font-size:15px}
@@ -509,12 +510,13 @@ const clone = o => JSON.parse(JSON.stringify(o ?? {}));
 const LS = 'trening90-cache-v2';
 // one plate of each size per end (4 of each = 2 dumbbells × 2 ends)
 const PLATES = [1, 1.25, 2.5], SETNAME = { H: 'CIĘŻKIE', L: 'LEKKIE' };
-const defSet = () => ({ trips: [], kcalAdj: 0, adjAt: '', handle: 2, H: [1, 1.25, 2.5], L: [1.25] });
+const defSet = () => ({ trips: [], kcalAdj: 0, adjAt: '', handle: 0.35, H: [1, 1.25, 2.5], L: [1, 1.25] });
 let DAYS = {}, SET = defSet();
 const ui = { tab: 'dzis', quick: false, force: false };
 try {
   const c = JSON.parse(localStorage.getItem(LS) || '{}');
   DAYS = c.days || {}; SET = Object.assign(SET, c.set); Object.assign(ui, c.ui);
+  if (!SET.u) Object.assign(SET, { handle: 0.35, L: [1, 1.25] }); // defaults from an older version, never edited
 } catch {}
 const cacheLS = () => { try { localStorage.setItem(LS, JSON.stringify({ days: DAYS, set: SET, ui: { tab: ui.tab, quick: ui.quick } })); } catch {} };
 const day = d => (DAYS[d] ||= {});
@@ -605,6 +607,7 @@ function setSync(m) { syncMsg = m; const el = document.getElementById('sync'); i
 async function initDb() {
   if (!window.claude?.use) return;
   try {
+    claude.use('sample').then(s => { ai = s; if (s && ui.tab === 'jedzenie') render(); }, () => {});
     const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
     const uid = user && await user.id();
     if (!db || !uid) return setSync('Zapis tylko na tym urządzeniu');
@@ -643,11 +646,23 @@ function cleanDay(v) {
   if (num(v.w)) o.w = num(v.w);
   if (num(v.bolt)) o.bolt = num(v.bolt);
   if (v.fin) o.fin = true;
+  if (typeof v.note === 'string' && v.note) o.note = v.note.slice(0, 2000);
   for (const f of ['ew', 'extra']) if (v[f] && typeof v[f] === 'object') o[f] = Object.fromEntries(Object.entries(v[f]).filter(([k, n]) => k in EX && num(n) !== undefined).map(([k, n]) => [k, num(n)]));
   if (Array.isArray(v.food)) o.food = v.food.map(f => ({ n: String(f?.n ?? '').slice(0, 80), p: num(f?.p) || 0, k: num(f?.k) || 0 }));
   if (v.post && typeof v.post === 'object') o.post = Object.fromEntries(Object.entries(v.post).filter(([k]) => /^[\w-]+$/.test(k)).map(([k, b]) => [k, !!b]));
   if (v.sets && typeof v.sets === 'object') o.sets = Object.fromEntries(Object.entries(v.sets).filter(([k, a]) => k in EX && Array.isArray(a)).map(([k, a]) => [k, a.map(s => ({ w: num(s?.w), r: num(s?.r), ok: !!s?.ok }))]));
   return o;
+}
+// newer copy wins for single fields; per exercise keep the copy with more done sets, so phone and online never erase each other
+function mergeDay(a, b) {
+  const [o, nw] = (a.u || 0) >= (b.u || 0) ? [b, a] : [a, b], okN = arr => (arr || []).filter(s => s?.ok).length;
+  const m = { ...o, ...nw, u: Math.max(a.u || 0, b.u || 0), sets: { ...o.sets, ...nw.sets }, post: { ...o.post, ...nw.post } };
+  for (const x in o.sets || {}) if (okN(o.sets[x]) > okN(nw.sets?.[x])) m.sets[x] = o.sets[x];
+  for (const k in o.post || {}) if (o.post[k]) m.post[k] = true;
+  m.food = (nw.food || []).length >= (o.food || []).length ? nw.food : o.food;
+  for (const k of ['sets', 'post']) if (!Object.keys(m[k]).length) delete m[k];
+  if (!m.food) delete m.food;
+  return m;
 }
 function importText(txt) {
   const o = JSON.parse(txt);
@@ -655,19 +670,45 @@ function importText(txt) {
   let n = 0;
   for (const [k, v] of Object.entries(o.days)) {
     if (!/^\d{4}-\d\d-\d\d$/.test(k) || !v || typeof v !== 'object') continue;
-    const c = cleanDay(v);
-    if (!DAYS[k] || c.u > (DAYS[k].u || 0)) { DAYS[k] = c; persist(k, true); n++; }
+    const a = DAYS[k], m = a ? mergeDay(a, cleanDay(v)) : cleanDay(v);
+    if (JSON.stringify(m) !== JSON.stringify(a)) { DAYS[k] = m; persist(k, true); n++; }
   }
   const s = o.set;
   if (s && typeof s === 'object' && (num(s.u) || 0) > (SET.u || 0)) {
     const pl = a => (Array.isArray(a) ? a : []).filter(x => PLATES.includes(x));
-    SET = { u: num(s.u), kcalAdj: num(s.kcalAdj) || 0, handle: num(s.handle) ?? 2, H: Array.isArray(s.H) ? pl(s.H) : defSet().H, L: Array.isArray(s.L) ? pl(s.L) : defSet().L, adjAt: /^\d{4}-\d\d-\d\d$/.test(s.adjAt) ? s.adjAt : '',
+    SET = { u: num(s.u), kcalAdj: num(s.kcalAdj) || 0, handle: num(s.handle) ?? 0.35, H: Array.isArray(s.H) ? pl(s.H) : defSet().H, L: Array.isArray(s.L) ? pl(s.L) : defSet().L, adjAt: /^\d{4}-\d\d-\d\d$/.test(s.adjAt) ? s.adjAt : '',
       trips: (Array.isArray(s.trips) ? s.trips : []).filter(t => t && t.eq in MODES && /^\d{4}-\d\d-\d\d$/.test(t.from) && /^\d{4}-\d\d-\d\d$/.test(t.to)).map(t => ({ from: t.from, to: t.to, eq: t.eq, label: String(t.label ?? '').slice(0, 60) })) };
     persist('settings', true);
   }
   return n;
 }
 let xferMsg = '';
+
+// ===== FOOD FROM TEXT (sample capability; absent offline) =====
+let ai = null, aiState = null;
+function aiHtml() {
+  if (!aiState) return '';
+  if (aiState.busy) return '<p class="mute">Liczę…</p>';
+  if (aiState.err) return `<p>${esc(aiState.err)}</p>`;
+  const sp = aiState.items.reduce((a, f) => a + f.p, 0), sk = aiState.items.reduce((a, f) => a + f.k, 0);
+  return `<div class="tw"><table>${aiState.items.map(f => `<tr><td>${esc(f.n)}</td><td class="tn">${f.p} g</td><td class="tn mute">${f.k} kcal</td></tr>`).join('')}<tr><th>Razem</th><th>${sp} g</th><th>${sk} kcal</th></tr></table></div>
+    ${aiState.comment ? `<p>${esc(aiState.comment)}</p>` : ''}<button class="pri" data-aiadd="1">Dodaj do dnia ${fmt(cur())}</button>`;
+}
+const showAi = () => { const el = document.getElementById('aiout'); if (el) el.innerHTML = aiHtml(); };
+function askFood(txt) {
+  const d = cur();
+  const prompt = `Jesteś rzeczowym dietetykiem. Rozbij opis jedzenia na pozycje i oszacuj białko (g) i kalorie (kcal) każdej, realistycznie dla polskich produktów. Niepewna porcja: przyjmij typową i napisz ją w nazwie.
+Kontekst: chłopak 20 lat, 185 cm, 66 kg, lean bulk, cel ${PROTEIN} g białka i ok. ${kcalTarget()} kcal dziennie. Na ten dzień ma już zapisane ${protein(d)} g białka i ${kcal(d)} kcal.
+Odpowiedz wyłącznie JSON: {"items":[{"n":"nazwa z porcją","p":0,"k":0}],"comment":"2–3 krótkie zdania: jak wypada dzień po dodaniu tego i jedna konkretna rada"}
+Opis: ${txt}`;
+  aiState = { busy: true }; showAi();
+  ai.json(prompt, { modelTier: 'quick' }).then(o => {
+    const items = (Array.isArray(o?.items) ? o.items : []).map(f => ({ n: String(f?.n ?? '').slice(0, 80), p: Math.max(0, Math.round(+f?.p || 0)), k: Math.max(0, Math.round(+f?.k || 0)) })).filter(f => f.n);
+    aiState = items.length ? { items, comment: String(o?.comment ?? '').slice(0, 600) } : { err: 'Nie znalazłem w opisie jedzenia. Napisz dokładniej.' };
+  }, e => {
+    aiState = { err: { not_granted: 'Nie ma zgody na użycie Claude na tej stronie.', rate_limited: 'Za dużo zapytań. Spróbuj za chwilę.', cancelled: 'Anulowano.' }[e?.code] || 'Nie udało się policzyć. Spróbuj jeszcze raz.' };
+  }).finally(showAi);
+}
 
 // ===== TIMER =====
 let tmr = null, audio = null;
@@ -724,11 +765,12 @@ const VIEWS = {
     const auto = DAYS[d]?.eq ? `<button class="ghost" data-eqday="auto" style="min-height:0;padding:2px 0">wróć do planu</button>` : '';
     const wdn = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'][at(d).getDay()];
     let lastSet = null;
+    const off = Object.keys(D.sets || {}).filter(x => EX[x] && !list.includes(x) && D.sets[x].some(s => s?.ok));
     const exHtml = list.map(x => {
       const s = eq === 'db' && EX[x].set; let h = '';
       if (s && s !== lastSet) { h = `<div class="setbar"><b>${lastSet ? 'Zmień talerze na' : 'Ustaw hantle'}: ${SETNAME[s]}</b><span>${esc(plateTxt(SET[s]))} → <b class="tn">${fmtKg(kgOf(s))} kg</b> na hantlę</span></div>`; lastSet = s; }
       return h + exCard(x, d, eq);
-    }).join('');
+    }).join('') + (off.length ? `<div class="setbar"><b>Zrobione tego dnia spoza obecnego planu</b><span>Zapisane w archiwum, liczą się do historii.</span></div>` + off.map(x => exCard(x, d, eq)).join('') : '');
     return `<div class="stack">
       <div class="datebar"><button data-dnav="-1" aria-label="Poprzedni dzień">‹</button><b class="grow">${isToday ? 'Dziś' : wdn + ' ' + fmt(d)}</b><button data-dnav="1" aria-label="Następny dzień">›</button></div>
       ${isToday ? '' : `<div class="note"><b>Przeglądasz ${fmt(d)}</b>Zmiany zapiszą się w tym dniu. <button class="ghost" data-dnav="0" style="min-height:0;padding:0;color:var(--blue)">Wróć do dziś</button></div>`}
@@ -750,6 +792,7 @@ const VIEWS = {
         ${exHtml}
         ${D.fin ? `<div class="note" style="--c:var(--ok)"><b>Trening zakończony</b>${okCount(D)} serii · rekordy: ${prCount(d)}. Zmiany możesz dalej wprowadzać.</div>` : trained(D) ? '<button class="pri" data-fin="1">Zakończ trening</button>' : ''}
       </div>` : `<div class="card"><p>Dziś odpoczynek, zrób tylko posturę. Mięśnie rosną między treningami.</p><button data-force="1">Pokaż trening mimo to</button></div>`}
+      <label class="card"><span class="lbl">Notatka do dnia</span><textarea id="note" data-note="1" rows="2" placeholder="np. co zrobiłem inaczej, jak się czułem">${esc(D.note || '')}</textarea></label>
       <div class="sync" id="sync">${esc(syncMsg)}</div>
     </div>`;
   },
@@ -761,6 +804,11 @@ const VIEWS = {
       <div class="stats">
         <div class="stat"><span class="lbl">Białko</span><span class="num">${p}<small class="mute"> / ${PROTEIN} g</small></span><div class="bar"><i style="width:${Math.min(100, p / PROTEIN * 100)}%"></i></div><span class="mute">${p >= PROTEIN ? 'Cel zrobiony' : 'Brakuje ' + (PROTEIN - p) + ' g'}</span></div>
         <div class="stat"><span class="lbl">Kalorie</span><span class="num">${k}<small class="mute"> / ${kcalTarget()}</small></span><div class="bar"><i style="width:${Math.min(100, k / kcalTarget() * 100)}%;background:var(--blue)"></i></div><span class="mute">Kalorie są opcjonalne</span></div>
+      </div>
+      <div class="card" ${ai ? '' : 'hidden'}><span class="lbl">Opisz, co zjadłeś</span>
+        <p class="mute">Napisz normalnie, Claude rozbije to na pozycje i policzy białko i kalorie. Dodaje do dnia ${fmt(d)}.</p>
+        <textarea id="aitext" rows="4" placeholder="np. owsianka z 80 g płatków, pół jogurtu naturalnego, garść orzechów; 2 tosty z serem i szynką"></textarea>
+        <button class="pri" data-ai="1">Policz</button><div id="aiout">${aiHtml()}</div>
       </div>
       <div class="card"><span class="lbl">Szybkie dodawanie</span>
         <div class="chips">${FOODS.map((f, i) => `<button data-food="${i}">${esc(f[0])} <small>${f[1]} g</small></button>`).join('')}</div>
@@ -845,7 +893,7 @@ const VIEWS = {
           <button class="pri">Dodaj okres</button></form>
       </div>
       <div class="card"><span class="lbl">Przenieś dane (wersja offline na Chiny)</span>
-        <p class="mute">Przed wyjazdem: tu „Kopiuj dane”, w wersji offline „Wklej” → „Wczytaj”. Po powrocie odwrotnie. Przy konflikcie wygrywa nowsza wersja dnia, więc nic nie nadpisze się wstecz.</p>
+        <p class="mute">Przed wyjazdem: tu „Kopiuj dane”, w wersji offline „Wklej” → „Wczytaj”. Po powrocie odwrotnie. Dane się łączą: dla każdego ćwiczenia zostaje wersja z większą liczbą zrobionych serii, więc nic nie ginie.</p>
         <div class="row"><button class="pri" data-copy="1">Kopiuj dane</button>${xferMsg ? `<span class="mute">${esc(xferMsg)}</span>` : ''}</div>
         <textarea id="xfer" rows="3" placeholder="Wklej tu skopiowane dane" style="width:100%;font:13px/1.4 ui-monospace,monospace;background:var(--sunk);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></textarea>
         <button data-import="1">Wczytaj wklejone dane</button>
@@ -947,6 +995,8 @@ document.addEventListener('click', e => {
     for (let j = 0; j < arr.length; j++) arr[j] ||= {};
     persist(d); startTimer(EX[x].rest); keepAwake(); render(); return;
   }
+  if (B.ai) { const t = document.getElementById('aitext').value.trim(); if (t && ai && !aiState?.busy) askFood(t); return; }
+  if (B.aiadd) { (day(d).food ||= []).push(...aiState.items); aiState = null; persist(d); render(); return; }
   if (B.food) { const f = FOODS[+B.food]; (day(d).food ||= []).push({ n: f[0], p: f[1], k: f[2] }); persist(d); render(); return; }
   if (B.delfood) { day(d).food.splice(+B.delfood, 1); persist(d); render(); return; }
   if (B.kadj) { SET.kcalAdj = (SET.kcalAdj || 0) + +B.kadj; SET.adjAt = d; persist('settings'); render(); return; }
@@ -975,6 +1025,7 @@ document.addEventListener('change', e => {
     const D = day(d), v = +t.value.replace(',', '.'); (D.ew ||= {})[T.ew] = v || undefined;
     (D.sets?.[T.ew] || []).forEach(s => { if (s?.ok) s.w = v || undefined; }); persist(d); return;
   }
+  if (T.note) { day(d).note = t.value.slice(0, 2000); persist(d); return; }
   if (T.handle) { SET.handle = +t.value.replace(',', '.') || 0; persist('settings'); render(); return; }
 });
 document.addEventListener('submit', e => {
