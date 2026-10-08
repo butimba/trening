@@ -86,13 +86,20 @@ input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:var(--ok);
 .pill{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--sunk);white-space:nowrap}
 .hint{font-size:14px;color:var(--ink);background:var(--sunk);border-radius:8px;padding:6px 10px}
 .sets{display:flex;flex-direction:column;gap:6px}
-.set{display:grid;grid-template-columns:22px 1fr 1fr 48px;gap:6px;align-items:center}
-.set.nokg{grid-template-columns:22px 1fr 48px}
+.set{display:grid;grid-template-columns:22px 1fr 56px;gap:8px;align-items:center}
 .set>span{font-size:13px;color:var(--mute);text-align:center}
-.set input{width:100%;text-align:center}
-.set button{padding:0;min-height:40px}
-.set.ok button{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.step{display:grid;grid-template-columns:44px 1fr 44px;gap:4px}
+.step input{width:100%;text-align:center;font-size:18px;font-weight:600}
+.set button{padding:0;min-height:44px;font-size:18px}
+.set.ok .ok{background:var(--ok);border-color:var(--ok);color:var(--surface)}
 .set.ok input{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
+.wrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px}
+.wrow input{width:84px;text-align:center;font-size:18px;font-weight:600}
+.setbar{display:flex;flex-direction:column;gap:2px;background:var(--sunk);border-left:4px solid var(--blue);border-radius:0 8px 8px 0;padding:8px 12px;font-size:15px}
+.datebar{display:flex;align-items:center;gap:8px;text-align:center;font-size:17px}
+.datebar button{min-width:48px;font-size:22px;padding:0 12px}
+.ex details p{margin:6px 0}
+.ex details table{margin-top:6px}
 a{color:var(--blue)}
 
 /* demos */
@@ -111,7 +118,7 @@ th{font-weight:600;color:var(--mute);font-size:12px;text-transform:uppercase;let
 
 /* calendar */
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-.cal div{aspect-ratio:1;max-width:100%;border-radius:6px;background:var(--sunk);font-size:12px;display:flex;align-items:center;justify-content:center;position:relative;border-bottom:3px solid var(--c,transparent);font-variant-numeric:tabular-nums}
+.cal button{aspect-ratio:1;max-width:100%;min-height:0;padding:0;border-radius:6px;background:var(--sunk);font-size:12px;display:flex;align-items:center;justify-content:center;border:0;border-bottom:3px solid var(--c,transparent);font-variant-numeric:tabular-nums}
 .cal .t{outline:2px solid var(--ink)}
 .cal .d{background:var(--ok);color:var(--surface)}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--mute)}
@@ -147,55 +154,101 @@ nav button.sel{color:var(--blue);background:none}
 // ===== PROGRAM =====
 const START = '2026-10-07', DAYS_TOTAL = 90, KCAL_BASE = 2850, PROTEIN = 130;
 
-// kg: logs weight · unit:'s' = seconds instead of reps · core: kept in the 15-min version
+// kg: logs weight · unit:'s' = seconds instead of reps · core: kept in the 15-min version · per: 'na stronę' for one-side work
+// set: dumbbell setting (H = CIĘŻKIE, L = LEKKIE); plans list H exercises first, so plates change once per session
+// steps/err: shown under "Jak to zrobić". Ids are saved in history: never rename or delete, only add (retired ones stay for history).
 const EX = {
-  // hantle
-  ohp: { n: 'Wyciskanie hantli nad głowę siedząc', en: 'seated dumbbell shoulder press', s: '3-4', r: '8-15', rest: 75, kg: 1, core: 1, how: '2 hantle ~8 kg, plecy oparte.', cue: 'Żebra w dół, łokcie lekko przed tułowiem.' },
-  row1: { n: 'Wiosłowanie jednorącz', en: 'one arm dumbbell row', s: '3-4', r: '8-15', rest: 60, kg: 1, core: 1, how: 'WSZYSTKIE talerze na 1 hantlę (~17 kg + gryf), ręka na krześle. Powtórzenia na stronę.', cue: 'Łokieć do biodra. Na dole łopatka odjeżdża w przód.' },
-  latlean: { n: 'Unoszenie bokiem w odchyleniu', en: 'lean away lateral raise', s: '4', r: '12-25', rest: 45, kg: 1, core: 1, how: '1 hantla 4–6 kg, trzymasz futrynę. Po upadku zdejmij talerz i jedź dalej.', cue: 'Prowadź łokciem, stop na wysokości barku.' },
-  rearfly: { n: 'Odwrotne rozpiętki w opadzie', en: 'bent over rear delt fly', s: '3', r: '15-25', rest: 45, kg: 1, how: '2–4 kg na rękę, czoło na oparciu krzesła.', cue: 'Ręce szeroko, łopatki z dala od uszu.' },
-  bayes: { n: 'Uginanie za tułowiem', en: 'behind the body dumbbell curl', s: '3', r: '10-20', rest: 45, kg: 1, how: '1 hantla jednorącz, stoisz plecami do drzwi.', cue: 'Łokieć za linią ciała, pełne rozciągnięcie na dole.' },
-  revcr: { n: 'Odwrotne spięcia brzucha', en: 'reverse crunch', s: '3', r: '10-20', rest: 45, core: 1, how: 'Leżąc. W fazie 3 hantla albo butelka między stopami.', cue: 'Zwijaj miednicę do żeber, bez machania nogami.' },
-  deadbug: { n: 'Dead bug', en: 'dead bug exercise', s: '2', r: '8-12', rest: 30, how: 'Powtórzenia na stronę. Ciężar w rękach = trudniej.', cue: 'Lędźwia przyklejone do podłogi, wydech przy wyproście.' },
-  pudef: { n: 'Pompki z deficytem', en: 'deficit push up', s: '3-4', r: '6-20', rest: 75, core: 1, how: 'Dłonie na hantlach albo książkach, klatka schodzi poniżej dłoni.', cue: 'Ciało jak deska, w dół 3 s, pauza na dole.' },
-  rowchest: { n: 'Wiosłowanie z klatką na łóżku', en: 'chest supported dumbbell row', s: '3-4', r: '10-20', rest: 60, kg: 1, core: 1, how: 'Leżysz na brzuchu na łóżku, 2 hantle ~8 kg.', cue: 'Klatka cały czas na łóżku, ściśnij łopatki 1 s.' },
-  latseat: { n: 'Unoszenie bokiem siedząc', en: 'seated dumbbell lateral raise', s: '4', r: '12-25', rest: 45, kg: 1, core: 1, how: '2 × 3–6 kg.', cue: 'Lekko pochyl tułów, ręce w płaszczyźnie łopatki.' },
-  yraise: { n: 'Unoszenie Y na brzuchu', en: 'prone y raise', s: '2-3', r: '12-20', rest: 45, kg: 1, how: 'Talerze 1–2 kg w dłoniach albo bez ciężaru.', cue: 'Kciuki w górę, ruch z dolnych łopatek, nie z karku.' },
-  ohtri: { n: 'Wyprost zza głowy jednorącz', en: 'one arm overhead dumbbell triceps extension', s: '3', r: '10-20', rest: 45, kg: 1, how: '1 hantla ~5–8 kg.', cue: 'Łokieć w sufit, głębokie rozciągnięcie za głową.' },
-  hollow: { n: 'Hollow body', en: 'hollow body hold', s: '3', r: '20-40', unit: 's', rest: 30, core: 1, how: 'Trzymanie w sekundach.', cue: 'Lędźwia w podłogę. Im dalej ręce, tym trudniej.' },
-  sideplank: { n: 'Deska bokiem', en: 'side plank', s: '2', r: '20-45', unit: 's', rest: 30, how: 'Sekundy na stronę.', cue: 'Biodra wysoko, ciało w jednej linii.' },
-  rollout: { n: 'Rollout na ręczniku', en: 'towel ab rollout', s: '2', r: '6-12', rest: 45, how: 'Od kolan, ręcznik na gładkiej podłodze.', cue: 'Tylko tak daleko, jak trzymasz neutralne lędźwia.' },
-  // bez sprzętu
-  pike: { n: 'Pompki pike', en: 'pike push up', s: '3-4', r: '6-15', rest: 75, core: 1, how: 'Łatwiej: stopy na podłodze. Trudniej: stopy na łóżku albo krześle.', cue: 'Głowa ląduje przed dłońmi, łokcie ~45°.', harder: 'stopy wyżej albo pauza 2 s na dole' },
-  towelrow: { n: 'Wiosłowanie ręcznikiem o drzwi', en: 'towel door row', s: '3-4', r: '10-20', rest: 60, core: 1, how: 'Ręcznik wokół obu klamek zamkniętych drzwi. Stań po stronie, w którą drzwi się NIE otwierają.', cue: 'Ciało proste, pauza 1 s przy klatce. Stopy bliżej drzwi = trudniej.', harder: 'stopy bliżej drzwi albo jednorącz' },
-  towelcurl: { n: 'Uginanie z ręcznikiem lub plecakiem', en: 'towel bicep curl', s: '3', r: '10-15', rest: 45, how: 'Stań na ręczniku i ciągnij, opór dawkuje noga. Albo plecak za uchwyt.', cue: 'Opuszczaj 3 s i walcz z opuszczaniem.', harder: 'mocniejszy opór nogą, 4 s w dół' },
-  tablerow: { n: 'Wiosłowanie pod stołem', en: 'inverted row under table', s: '3-4', r: '8-20', rest: 60, core: 1, how: 'Pod solidnym stołem albo biurkiem, chwyt krawędzi. Brak stołu: ręcznik o drzwi.', cue: 'Klatka do blatu, ciało jak deska.', harder: 'nogi proste albo stopy na krześle' },
-  dips: { n: 'Pompki na krześle', en: 'chair dips', s: '3', r: '8-20', rest: 60, how: 'Dłonie na krawędzi krzesła albo łóżka. Nogi ugięte = łatwiej, proste = trudniej.', cue: 'Łokcie do tyłu, barki z dala od uszu. Bark boli → płycej.', harder: 'nogi proste albo na drugim krześle' },
-  // guma (miękka, turkusowa z Decathlonu)
-  bandlat: { n: 'Unoszenie bokiem z gumą', en: 'resistance band lateral raise', s: '4', r: '15-30', rest: 45, core: 1, how: 'Stań na środku gumy jedną stopą, ciągniesz jednorącz. Za lekko? Stań na gumie obiema stopami albo złap krócej.', cue: 'Prowadź łokciem, 2 s pauzy na górze, 3 s w dół.', harder: 'krótszy chwyt albo guma złożona na pół' },
-  bandpull: { n: 'Rozciąganie gumy przed sobą (pull-apart)', en: 'band pull apart', s: '3', r: '15-25', rest: 30, how: 'Ręce proste na wysokości barków, chwyt na szerokość barków.', cue: 'Rozciągaj do klatki, łopatki do siebie i w dół. Świetne na garb.', harder: 'węższy chwyt' },
-  bandface: { n: 'Face pull z gumą', en: 'band face pull', s: '3', r: '15-25', rest: 30, how: 'Guma zaczepiona o klamkę albo nogę łóżka na wysokości twarzy.', cue: 'Ciągnij do czoła, kciuki do tyłu, 1 s pauzy.', harder: 'odejdź krok dalej' },
+  // hantle (program domowy)
+  row2: { n: 'Wiosłowanie hantlami w opadzie', en: 'dumbbell bent over row', s: '3-4', r: '8-12', rest: 90, kg: 1, set: 'H', core: 1, cue: 'Plecy proste, łokcie ciągniesz do bioder.',
+    steps: ['Stań, stopy na szerokość bioder, hantle w dłoniach, kolana lekko ugięte.', 'Pochyl się w biodrach (pupa do tyłu), plecy proste, tułów prawie równolegle do podłogi. Ręce wiszą pod barkami.', 'Przyciągnij obie hantle do dolnych żeber, łokcie blisko ciała. Na górze ściśnij łopatki na 1 s.', 'Opuszczaj przez 2–3 s do pełnego wyprostu rąk.'],
+    err: 'Szarpanie tułowiem i zaokrąglone plecy. Jak plecy się garbią, pochyl się mniej.' },
+  row1: { n: 'Wiosłowanie jednorącz', en: 'one arm dumbbell row', s: '3-4', r: '8-12', rest: 60, kg: 1, set: 'H', core: 1, per: 'na stronę', cue: 'Ciągnij do biodra, nie do klatki.',
+    steps: ['Weź jedną hantlę z ustawienia CIĘŻKIE.', 'Jedno kolano i dłoń na łóżku albo krześle, druga stopa na podłodze. Plecy płasko.', 'Ręka z hantlą wisi prosto pod barkiem. Przyciągnij hantlę w stronę biodra, łokieć blisko ciała. 1 s pauzy na górze.', 'Opuść powoli do pełnego wyprostu. Wszystkie powtórzenia, potem druga strona.'],
+    err: 'Obracanie tułowia, żeby pomóc sobie ciałem. Klatka cały czas skierowana w podłogę.' },
+  ohtri: { n: 'Wyprost nad głową jedną hantlą', en: 'two hand overhead dumbbell triceps extension', s: '3', r: '8-12', rest: 60, kg: 1, set: 'H', cue: 'Łokcie w sufit, ruszają się tylko przedramiona.',
+    steps: ['Usiądź prosto. Złap jedną ciężką hantlę oburącz pod górnym talerzem i unieś ją nad głowę.', 'Łokcie wskazują sufit i są blisko głowy.', 'Opuść hantlę za głowę, aż poczujesz rozciąganie z tyłu ramion.', 'Wyprostuj ręce w górę.'],
+    err: 'Łokcie rozjeżdżają się na boki, a lędźwia się wyginają.' },
+  latseat: { n: 'Unoszenie hantli bokiem', en: 'dumbbell lateral raise', s: '3-4', r: '12-15', rest: 45, kg: 1, set: 'L', core: 1, cue: 'Prowadź łokciem, stop na wysokości barków.',
+    steps: ['Stań prosto, hantle przy udach, łokcie lekko ugięte i takie zostają.', 'Pochyl tułów minimalnie do przodu.', 'Unoś obie ręce bokami do wysokości barków. Prowadzi łokieć, nie dłoń.', 'Opuszczaj powoli przez 2–3 s. Tułów się nie buja.'],
+    err: 'Bujanie ciałem i podciąganie barków do uszu. Lepiej mniej powtórzeń, ale czysto.' },
+  rearfly: { n: 'Odwrotne rozpiętki siedząc w opadzie', en: 'seated bent over rear delt fly', s: '3', r: '12-15', rest: 45, kg: 1, set: 'L', cue: 'Ręce szeroko na boki, nie wiosłuj.',
+    steps: ['Usiądź na brzegu krzesła, pochyl się, aż klatka będzie blisko ud. Hantle wiszą przy łydkach.', 'Łokcie lekko ugięte i takie zostają.', 'Unieś ręce szeroko na boki, aż będą w linii z tułowiem.', 'Opuszczaj powoli. Ruch czujesz z tyłu barków.'],
+    err: 'Przyciąganie łokci do tyłu jak przy wiosłowaniu. To ma być szeroki łuk na boki.' },
+  curl: { n: 'Uginanie ramion z hantlami', en: 'dumbbell bicep curl', s: '3', r: '12-20', rest: 45, kg: 1, set: 'L', cue: 'Łokcie przy bokach, w dół przez 3 s.',
+    steps: ['Stań, hantle wzdłuż ciała, dłonie przodem.', 'Łokcie przy bokach przez cały ruch.', 'Ugnij ręce i unieś hantle do barków. Na górze ściśnij biceps.', 'Opuszczaj przez 3 s do pełnego wyprostu.'],
+    err: 'Bujanie tułowiem i wysuwanie łokci do przodu.' },
+  pushup: { n: 'Pompki', en: 'push up proper form', s: '3', r: '6-20', rest: 75, core: 1, cue: 'Ciało jak deska, łokcie skośnie do tyłu.', harder: 'dłonie na hantlach (głębiej) albo stopy na łóżku',
+    steps: ['Dłonie trochę szerzej niż barki, ciało proste od głowy do pięt. Napnij brzuch i pośladki.', 'Opuszczaj się przez 2–3 s, łokcie idą skośnie do tyłu (ok. 45° od tułowia), nie na boki.', 'Klatka prawie dotyka podłogi.', 'Wypchnij się do wyprostu.', 'Za trudno: dłonie na łóżku. Kończ serię 1–2 powtórzenia przed upadkiem.'],
+    err: 'Opadające biodra i łokcie rozłożone na boki.' },
+  pike: { n: 'Pompki pike', en: 'pike push up', s: '3', r: '6-12', rest: 75, core: 1, cue: 'Biodra wysoko, głowa ląduje przed dłońmi.', harder: 'stopy na łóżku albo pauza 2 s na dole',
+    steps: ['Pozycja jak do pompki, potem przejdź stopami bliżej dłoni, aż ciało zrobi odwrócone V.', 'Ugnij łokcie i opuść czubek głowy w stronę podłogi, trochę przed dłonie.', 'Wypchnij się z powrotem do V. To ćwiczenie zastępuje wyciskanie nad głowę.'],
+    err: 'Łokcie na boki. Mają iść lekko do tyłu.' },
+  revcr: { n: 'Odwrotne spięcia brzucha', en: 'reverse crunch', s: '2-3', r: '10-15', rest: 45, core: 1, cue: 'Zwijaj miednicę, nogi się nie bujają.', harder: 'wolniej w dół (3 s) albo nogi bardziej proste',
+    steps: ['Leż na plecach, ręce wzdłuż ciała dłońmi w dół. Nogi w górze, kolana zgięte pod kątem prostym.', 'Z wydechem zwiń miednicę w stronę żeber, odrywając biodra kilka cm od podłogi.', 'Opuść powoli, aż kość ogonowa dotknie podłogi.'],
+    err: 'Machanie nogami zamiast zwijania miednicy. Ruch jest mały i idzie z brzucha.' },
+  hollow: { n: 'Hollow body', en: 'hollow body hold', s: '2-3', r: '20-40', unit: 's', rest: 30, core: 1, cue: 'Lędźwia w podłogę, ciało jak banan.', harder: 'ręce dalej za głowę, nogi niżej',
+    steps: ['Leż na plecach, dociśnij lędźwia do podłogi.', 'Unieś barki i nogi kilka cm nad podłogę, ręce wyciągnij za głowę.', 'Trzymaj, oddychając spokojnie.', 'Łatwiej: ręce wzdłuż ciała i ugięte kolana.'],
+    err: 'Lędźwia się odklejają. Ugnij kolana albo unieś nogi wyżej.' },
+  deadbug: { n: 'Dead bug', en: 'dead bug exercise', s: '2', r: '8-12', rest: 30, per: 'na stronę', cue: 'Lędźwia przyklejone do podłogi.',
+    steps: ['Leż na plecach, ręce w górze nad barkami, nogi w górze, kolana zgięte pod kątem prostym.', 'Dociśnij lędźwia do podłogi i trzymaj je tak cały czas.', 'Z wydechem powoli wyprostuj przeciwną rękę za głowę i nogę do przodu, tuż nad podłogą.', 'Wróć i zmień strony.'],
+    err: 'Lędźwia odrywają się od podłogi. Wtedy prostuj nogę mniej nisko.' },
+  sideplank: { n: 'Deska bokiem', en: 'side plank', s: '2', r: '20-45', unit: 's', rest: 30, per: 'na stronę', cue: 'Biodra wysoko, ciało w jednej linii.',
+    steps: ['Połóż się na boku, łokieć pod barkiem, nogi proste jedna na drugiej.', 'Unieś biodra, aż ciało będzie prostą linią od głowy do stóp.', 'Trzymaj, potem druga strona.', 'Łatwiej: kolana ugięte i oparte o podłogę.'],
+    err: 'Biodra opadają albo uciekają do tyłu.' },
+  ohp: { n: 'Wyciskanie hantli nad głowę siedząc', en: 'seated dumbbell shoulder press', s: '3', r: '8-12', rest: 75, kg: 1, cue: 'Brzuch napięty, nie odchylaj się.',
+    steps: ['Usiądź prosto, hantle na wysokości barków, łokcie lekko przed tułowiem.', 'Napnij brzuch, żebra w dół.', 'Wypchnij hantle w górę, aż ręce prawie się wyprostują.', 'Opuszczaj przez 2 s do barków.'],
+    err: 'Odchylanie się do tyłu.' },
+  // guma / bez sprzętu (wyjazd)
+  bandrow: { n: 'Wiosłowanie gumą siedząc', en: 'seated resistance band row', s: '4', r: '15-20', rest: 45, core: 1, cue: 'Łokcie do tyłu, ściśnij łopatki.', harder: 'złap gumę krócej albo owiń ją wokół dłoni',
+    steps: ['Usiądź na podłodze, nogi proste. Załóż środek gumy na stopy, końce w dłoniach.', 'Plecy proste, minimalnie odchylone do tyłu.', 'Przyciągnij dłonie do brzucha, łokcie blisko ciała. Ściśnij łopatki na 1 s.', 'Wracaj powoli do wyprostu rąk.'],
+    err: 'Kołysanie tułowiem zamiast pracy rąk i pleców.' },
+  bandlat: { n: 'Unoszenie bokiem z gumą', en: 'resistance band lateral raise', s: '3', r: '15-20', rest: 45, core: 1, per: 'na stronę', cue: 'Prowadź łokciem, 2 s pauzy na górze.', harder: 'krótszy chwyt albo stań na gumie obiema stopami',
+    steps: ['Stań jedną stopą na końcu gumy, drugi koniec w dłoni po tej samej stronie.', 'Łokieć lekko ugięty.', 'Unieś rękę bokiem do wysokości barku, 2 s pauzy.', 'Opuszczaj przez 3 s. Potem druga strona.'],
+    err: 'Podciąganie barku do ucha.' },
+  bandpull: { n: 'Rozciąganie gumy przed sobą', en: 'band pull apart', s: '3', r: '15-25', rest: 30, cue: 'Łopatki do siebie i w dół.', harder: 'węższy chwyt',
+    steps: ['Złap gumę na szerokość barków, ręce proste przed sobą na wysokości barków.', 'Rozciągnij gumę na boki, aż dotknie klatki.', 'Wracaj powoli przez 2 s.'],
+    err: 'Uginanie łokci i unoszenie barków.' },
+  bandface: { n: 'Face pull z gumą', en: 'band face pull', s: '3', r: '15-20', rest: 30, cue: 'Ciągnij do czoła, łokcie wysoko.', harder: 'odejdź krok dalej',
+    steps: ['Zaczep gumę o klamkę na wysokości twarzy, złap oba końce.', 'Odejdź, aż guma się napnie.', 'Ciągnij do czoła, łokcie wysoko i na boki, dłonie kończą przy uszach.', 'Wracaj powoli.'],
+    err: 'Łokcie opadają i robi się z tego zwykłe wiosłowanie.' },
+  bandcurl: { n: 'Uginanie ramion z gumą', en: 'resistance band bicep curl', s: '3', r: '15-20', rest: 45, cue: 'Łokcie przy bokach.', harder: 'stań szerzej na gumie',
+    steps: ['Stań na środku gumy, końce w dłoniach.', 'Łokcie przy bokach.', 'Ugnij ręce do barków, ściśnij na górze.', 'Opuszczaj przez 3 s.'],
+    err: 'Bujanie tułowiem.' },
+  dips: { n: 'Pompki na krześle', en: 'chair dips', s: '3', r: '8-15', rest: 60, cue: 'Łokcie do tyłu, barki nisko.', harder: 'nogi proste',
+    steps: ['Usiądź na brzegu stabilnego krzesła, dłonie obok bioder na krawędzi.', 'Zsuń pupę z krzesła, nogi ugięte, stopy na podłodze.', 'Ugnij łokcie do tyłu i opuść się, aż ramiona będą mniej więcej poziomo.', 'Wypchnij się w górę.'],
+    err: 'Za głęboko i barki do przodu. Jak bark boli, schodź płycej.' },
+  // stare ćwiczenia: zostają tylko dla historii
+  latlean: { n: 'Unoszenie bokiem w odchyleniu', en: 'lean away lateral raise', s: '4', r: '12-25', rest: 45, kg: 1, cue: '' },
+  bayes: { n: 'Uginanie za tułowiem', en: 'behind the body dumbbell curl', s: '3', r: '10-20', rest: 45, kg: 1, cue: '' },
+  pudef: { n: 'Pompki z deficytem', en: 'deficit push up', s: '3-4', r: '6-20', rest: 75, cue: '' },
+  rowchest: { n: 'Wiosłowanie z klatką na łóżku', en: 'chest supported dumbbell row', s: '3-4', r: '10-20', rest: 60, kg: 1, cue: '' },
+  yraise: { n: 'Unoszenie Y na brzuchu', en: 'prone y raise', s: '2-3', r: '12-20', rest: 45, kg: 1, cue: '' },
+  rollout: { n: 'Rollout na ręczniku', en: 'towel ab rollout', s: '2', r: '6-12', rest: 45, cue: '' },
+  towelrow: { n: 'Wiosłowanie ręcznikiem o drzwi', en: 'towel door row', s: '3-4', r: '10-20', rest: 60, cue: '' },
+  towelcurl: { n: 'Uginanie z ręcznikiem', en: 'towel bicep curl', s: '3', r: '10-15', rest: 45, cue: '' },
+  tablerow: { n: 'Wiosłowanie pod stołem', en: 'inverted row under table', s: '3-4', r: '8-20', rest: 60, cue: '' },
   // siłownia
-  pulldown: { n: 'Ściąganie drążka', en: 'lat pulldown', s: '3-4', r: '8-15', rest: 90, kg: 1, core: 1, how: 'Wyciąg górny, nachwyt trochę szerzej niż barki. Albo podciąganie z gumą.', cue: 'Łokcie do kieszeni, klatka do drążka.' },
-  cablelat: { n: 'Unoszenie bokiem na wyciągu', en: 'cable lateral raise', s: '4', r: '12-20', rest: 45, kg: 1, core: 1, how: 'Wyciąg nisko, linka przechodzi za ciałem.', cue: 'Pełne rozciągnięcie na dole, stop na wysokości barku.' },
+  pulldown: { n: 'Ściąganie drążka', en: 'lat pulldown', s: '3-4', r: '8-12', rest: 90, kg: 1, core: 1, how: 'Wyciąg górny, nachwyt trochę szerzej niż barki.', cue: 'Łokcie do kieszeni, klatka do drążka.' },
+  cablelat: { n: 'Unoszenie bokiem na wyciągu', en: 'cable lateral raise', s: '3', r: '12-15', rest: 45, kg: 1, core: 1, per: 'na stronę', how: 'Wyciąg nisko, linka przechodzi przed ciałem.', cue: 'Pełne rozciągnięcie na dole, stop na wysokości barku.' },
   mohp: { n: 'Wyciskanie nad głowę', en: 'machine shoulder press', s: '3', r: '8-12', rest: 90, kg: 1, how: 'Maszyna albo hantle siedząc.', cue: 'Żebra w dół, pełen zakres.' },
-  cablerow: { n: 'Wiosłowanie siedząc na wyciągu', en: 'seated cable row', s: '3-4', r: '8-15', rest: 75, kg: 1, core: 1, how: 'Uchwyt V albo szeroki.', cue: 'Pozwól łopatkom odjechać w przód, ciągnij do brzucha.' },
-  facepull: { n: 'Face pull', en: 'face pull', s: '3', r: '12-20', rest: 45, kg: 1, how: 'Lina na wysokości oczu.', cue: 'Ciągnij do czoła, kciuki obracaj do tyłu. Najlepsze na posturę.' },
-  cablecurl: { n: 'Uginanie na wyciągu za tułowiem', en: 'bayesian cable curl', s: '3', r: '10-15', rest: 45, kg: 1, how: 'Wyciąg nisko, stoisz tyłem.', cue: 'Łokieć za tułowiem.' },
+  cablerow: { n: 'Wiosłowanie siedząc na wyciągu', en: 'seated cable row', s: '3-4', r: '8-12', rest: 75, kg: 1, core: 1, how: 'Uchwyt V albo szeroki.', cue: 'Pozwól łopatkom odjechać w przód, ciągnij do brzucha.' },
+  facepull: { n: 'Face pull', en: 'face pull', s: '3', r: '12-15', rest: 45, kg: 1, how: 'Lina na wysokości oczu.', cue: 'Ciągnij do czoła, kciuki obracaj do tyłu.' },
+  cablecurl: { n: 'Uginanie na wyciągu', en: 'cable bicep curl', s: '3', r: '10-15', rest: 45, kg: 1, how: 'Wyciąg nisko, drążek albo lina.', cue: 'Łokcie przy bokach.' },
   cablecr: { n: 'Spięcia brzucha na wyciągu', en: 'kneeling cable crunch', s: '3', r: '10-15', rest: 45, kg: 1, core: 1, how: 'Klęk, lina przy głowie.', cue: 'Zwijaj żebra do miednicy, biodra stoją.' },
   hangknee: { n: 'Unoszenie kolan w zwisie', en: 'hanging knee raise', s: '3', r: '8-15', rest: 45, core: 1, how: 'Drążek albo poręcze.', cue: 'Podwiń miednicę, nie bujaj się.' },
   inclinedb: { n: 'Wyciskanie hantli na skosie', en: 'incline dumbbell press', s: '3', r: '8-12', rest: 90, kg: 1, core: 1, how: 'Ławka ~30°.', cue: 'Łopatki ściągnięte, łokcie ~45°.' },
-  rowsingle: { n: 'Wiosłowanie jednorącz na wyciągu', en: 'single arm cable row', s: '3', r: '10-15', rest: 60, kg: 1, how: 'Wyciąg na wysokości barku albo niżej.', cue: 'Łokieć do biodra, pełne rozciągnięcie.' },
-  reversefly: { n: 'Odwrotne rozpiętki na maszynie', en: 'reverse pec deck', s: '3', r: '12-20', rest: 45, kg: 1, how: 'Reverse pec deck.', cue: 'Ręce szeroko, łopatki spokojne.' },
+  rowsingle: { n: 'Wiosłowanie jednorącz na wyciągu', en: 'single arm cable row', s: '3', r: '10-15', rest: 60, kg: 1, per: 'na stronę', how: 'Wyciąg na wysokości barku albo niżej.', cue: 'Łokieć do biodra, pełne rozciągnięcie.' },
+  reversefly: { n: 'Odwrotne rozpiętki na maszynie', en: 'reverse pec deck', s: '3', r: '12-15', rest: 45, kg: 1, how: 'Reverse pec deck.', cue: 'Ręce szeroko, łopatki spokojne.' },
   ohcable: { n: 'Wyprost nad głową na wyciągu', en: 'overhead cable triceps extension', s: '3', r: '10-15', rest: 45, kg: 1, how: 'Lina, stoisz tyłem do wyciągu.', cue: 'Głębokie rozciągnięcie za głową.' },
 };
 
+// order matters: CIĘŻKIE first, then one plate change to LEKKIE
 const PLANS = {
-  db: { A: ['ohp', 'row1', 'latlean', 'rearfly', 'bayes', 'revcr', 'deadbug'], B: ['pudef', 'rowchest', 'latseat', 'yraise', 'ohtri', 'hollow', 'sideplank', 'rollout'] },
-  bw: { A: ['pike', 'towelrow', 'bandlat', 'bandface', 'towelcurl', 'revcr', 'deadbug'], B: ['pudef', 'tablerow', 'bandlat', 'bandpull', 'dips', 'hollow', 'sideplank', 'rollout'] },
-  gym: { A: ['pulldown', 'cablelat', 'mohp', 'cablerow', 'facepull', 'cablecurl', 'cablecr'], B: ['inclinedb', 'rowsingle', 'cablelat', 'reversefly', 'ohcable', 'hangknee', 'cablecr'] },
+  db: { A: ['row2', 'pushup', 'latseat', 'rearfly', 'curl', 'revcr'], B: ['row1', 'ohtri', 'pike', 'latseat', 'hollow'] },
+  bw: { A: ['pike', 'bandrow', 'bandlat', 'bandface', 'bandcurl', 'revcr'], B: ['pushup', 'bandrow', 'bandlat', 'bandpull', 'dips', 'hollow'] },
+  gym: { A: ['pulldown', 'cablelat', 'mohp', 'cablerow', 'facepull', 'cablecurl', 'cablecr'], B: ['inclinedb', 'rowsingle', 'cablelat', 'reversefly', 'ohcable', 'hangknee'] },
 };
-const SES_NAME = { A: 'A · Barki + Plecy', B: 'B · Klatka + Plecy + Ramiona' };
+const SES_NAME = { A: 'A · Plecy + Barki', B: 'B · Plecy + Ramiona' };
 
 const MODES = {
   db: { label: 'Hantle', focus: 'Normalny tryb. Co tydzień pobijasz ostatni wynik: +1 powtórzenie albo następny talerz.' },
@@ -290,9 +343,14 @@ const DEMO = {
   deadbug: { anc: ['neck', 38, 89], p: [{ T: -90, H: -90, U: 0, F: 0, L: 0, S: 90 }, { T: -90, H: -90, U: -80, F: -80, u: 0, f: 0, L: 80, S: 85, l: 0, s: 90 }] },
   pudef: { anc: ['hand', 82, 91], props: [['rect', 76, 91, 12, 4]], p: [{ T: 62, H: 70, U: 180, F: 180, L: 242, S: 242 }, { T: 84, H: 90, U: 300, F: 170, L: 264, S: 264 }] },
   rowchest: { anc: ['hip', 50, 58], db: 1, props: [['rect', 10, 61, 70, 34]], p: [{ T: 90, H: 105, L: 270, S: 270 }, { T: 90, H: 105, L: 270, S: 270, U: -40, F: 170 }] },
-  latseat: { v: 'f', seat: 1, db: 1, p: [{ aL: 12, aR: 12, eL: 5, eR: 5 }, { aL: 88, aR: 88, eL: 5, eR: 5 }] },
+  latseat: { v: 'f', db: 1, p: [{ aL: 12, aR: 12, eL: 5, eR: 5 }, { aL: 88, aR: 88, eL: 5, eR: 5 }] },
   yraise: { anc: ['hip', 38, 90], db: 1, p: [{ T: 90, H: 95, L: 270, S: 270, U: 90, F: 90 }, { T: 90, H: 95, L: 270, S: 270, U: 68, F: 68 }] },
-  ohtri: { anc: ['foot', 60, 95], db: 1, p: [{ U: -5, F: -150, u: 180, f: 180 }, { U: -5, F: -5, u: 180, f: 180 }] },
+  ohtri: { anc: ['foot', 60, 95], db: 1, p: [{ U: -5, F: -150 }, { U: -5, F: -5 }] },
+  row2: { anc: ['foot', 50, 95], db: 1, p: [{ T: 75, H: 85, L: 165, l: 175 }, { T: 75, H: 85, L: 165, l: 175, U: -50, F: 185 }] },
+  curl: { anc: ['foot', 60, 95], db: 1, p: [{ U: 175, F: 175, u: 180, f: 180 }, { U: 175, F: 25, u: 180, f: 180 }] },
+  pushup: { anc: ['hand', 82, 93], p: [{ T: 62, H: 70, U: 180, F: 180, L: 242, S: 242 }, { T: 84, H: 90, U: 300, F: 170, L: 264, S: 264 }] },
+  bandrow: { anc: ['hip', 35, 88], props: [['link', 'hand', 'foot']], p: [{ T: 10, L: 90, S: 90, U: 130, F: 130 }, { T: -5, L: 90, S: 90, U: 200, F: 100 }] },
+  bandcurl: { anc: ['foot', 60, 95], props: [['link', 'hand', 'foot']], p: [{ U: 175, F: 175, u: 180, f: 180 }, { U: 175, F: 25, u: 180, f: 180 }] },
   hollow: { anc: ['hip', 70, 90], p: [{ T: -85, H: -80, U: -80, F: -80, L: 82, S: 82 }, { T: -80, H: -75, U: -74, F: -74, L: 74, S: 74 }] },
   sideplank: { anc: ['elbow', 30, 93], p: [{ T: -60, H: -60, U: 180, F: -90, L: 95, S: 95 }, { T: -76, H: -76, U: 180, F: -90, L: 104, S: 104 }] },
   rollout: { anc: ['knee', 30, 93], p: [{ T: 70, U: 155, F: 155, L: 170, S: 270 }, { T: 84, U: 100, F: 100, L: 240, S: 270 }] },
@@ -449,7 +507,10 @@ const clone = o => JSON.parse(JSON.stringify(o ?? {}));
 
 // ===== STATE =====
 const LS = 'trening90-cache-v2';
-let DAYS = {}, SET = { trips: [], kcalAdj: 0, adjAt: '' };
+// one plate of each size per end (4 of each = 2 dumbbells × 2 ends)
+const PLATES = [1, 1.25, 2.5], SETNAME = { H: 'CIĘŻKIE', L: 'LEKKIE' };
+const defSet = () => ({ trips: [], kcalAdj: 0, adjAt: '', handle: 2, H: [1, 1.25, 2.5], L: [1.25] });
+let DAYS = {}, SET = defSet();
 const ui = { tab: 'dzis', quick: false, force: false };
 try {
   const c = JSON.parse(localStorage.getItem(LS) || '{}');
@@ -457,6 +518,15 @@ try {
 } catch {}
 const cacheLS = () => { try { localStorage.setItem(LS, JSON.stringify({ days: DAYS, set: SET, ui: { tab: ui.tab, quick: ui.quick } })); } catch {} };
 const day = d => (DAYS[d] ||= {});
+let shownDay = today();
+const cur = () => ui.date || shownDay; // the day on screen; a workout past midnight stays on its day
+const fmtKg = v => String(+(+v).toFixed(2)).replace('.', ',');
+const kgOf = k => +(2 * SET[k].reduce((a, b) => a + b, 0) + (+SET.handle || 0)).toFixed(2);
+const plateTxt = a => a.length ? a.map(fmtKg).join(' + ') + ' kg na każdą stronę' : 'sam gryf';
+function nextUp(k) { // next heavier plate combo per end
+  const combos = [[], [1], [1.25], [1, 1.25], [2.5], [1, 2.5], [1.25, 2.5], [1, 1.25, 2.5]], sum = a => a.reduce((x, y) => x + y, 0);
+  return combos.find(c => sum(c) > sum(SET[k])) || null;
+}
 
 function eqFor(d) {
   if (DAYS[d]?.eq) return DAYS[d].eq;
@@ -470,34 +540,45 @@ function trainToday(d) {
   const last6 = [1, 2, 3, 4, 5, 6].filter(i => trained(DAYS[addDays(d, -i)])).length;
   return last6 < 4 && !(trained(DAYS[addDays(d, -1)]) && trained(DAYS[addDays(d, -2)]));
 }
+const okCount = D => Object.values(D?.sets || {}).reduce((a, s) => a + s.filter(x => x?.ok).length, 0);
+const doneEnough = D => !!D && (D.fin || okCount(D) >= 8);
 function sessionFor(d) {
   if (DAYS[d]?.ses) return DAYS[d].ses;
   const prev = Object.keys(DAYS).filter(k => k < d && DAYS[k].ses && trained(DAYS[k])).sort().at(-1);
-  return prev && DAYS[prev].ses === 'A' ? 'B' : 'A';
+  if (!prev) return 'A';
+  return doneEnough(DAYS[prev]) ? (DAYS[prev].ses === 'A' ? 'B' : 'A') : DAYS[prev].ses; // abandoned early → same session again
 }
 function setsFor(x, d) {
   const [lo, hi = lo] = EX[x].s.split('-').map(Number), p = phaseOf(d).name;
-  if (p === 'Technika') return lo;
-  if (p === 'Deload') return Math.ceil(hi / 2);
-  return hi;
+  const extra = DAYS[d]?.extra?.[x] || 0;
+  if (p === 'Technika') return lo + extra;
+  if (p === 'Deload') return Math.ceil(hi / 2) + extra;
+  return hi + extra;
 }
 function lastEntry(x, d) {
   const k = Object.keys(DAYS).filter(k => k < d && DAYS[k].sets?.[x]?.some(s => s?.ok)).sort().at(-1);
-  return k ? { d: k, sets: DAYS[k].sets[x].filter(s => s?.ok) } : null;
+  return k ? { d: k, sets: DAYS[k].sets[x].map(s => s?.ok ? s : null) } : null; // keeps set positions
 }
 function hint(x, d, eq) {
-  const e = EX[x], last = lastEntry(x, d), hi = +e.r.split('-')[1], u = e.unit === 's' ? 's' : '';
+  const e = EX[x], last = lastEntry(x, d), hi = +e.r.split('-')[1], u = e.unit === 's' ? ' s' : '';
   if (phaseOf(d).name === 'Deload') return 'Deload: lżej, żadnej serii do upadku.';
-  if (!last) return eq === 'bw' ? 'Pierwszy raz: dobierz wersję tak, żeby skończyć 0–1 powt. przed upadkiem.' : 'Pierwszy raz: dobierz ciężar tak, żeby zostały 2–3 powt. w zapasie. Zapisz wynik.';
-  const str = last.sets.map(s => (s.w ? s.w + '×' : '') + s.r + u).join(', ');
-  const top = last.sets.length && last.sets.every(s => +s.r >= hi);
-  const next = top ? (e.kg && eq !== 'bw' ? 'Wszystkie serie w górze zakresu → dziś następny talerz (+0,25–1 kg).' : `Wszystkie serie w górze zakresu → dziś trudniej: ${e.harder || 'wolniejsze opuszczanie (4 s) albo pauza'}.`) : 'Cel: pobij to o 1 powtórzenie w dowolnej serii.';
+  if (!last) return eq === 'bw' ? 'Pierwszy raz: skończ każdą serię 0–1 powtórzenie przed upadkiem.' : 'Pierwszy raz: zostaw 1–2 powtórzenia w zapasie i zapisz wynik.';
+  const ok = last.sets.filter(Boolean), str = ok.map(s => (s.w ? fmtKg(s.w) + ' kg × ' : '') + s.r + u).join(', ');
+  let next = 'Cel: o 1 powtórzenie więcej w dowolnej serii.';
+  if (ok.length && ok.every(s => +s.r >= hi)) {
+    const up = e.set && eq === 'db' && nextUp(e.set);
+    next = e.set && eq === 'db'
+      ? (up ? `Górny zakres zrobiony. Gdy reszta ćwiczeń na ${SETNAME[e.set]} też dojdzie do góry, przełóż na ${plateTxt(up)}. Do tego czasu opuszczaj wolniej (4 s).` : 'Górny zakres zrobiony, a talerze się skończyły: opuszczaj przez 4 s albo dodaj serię.')
+      : e.kg && eq === 'gym' ? 'Górny zakres zrobiony → dziś najmniejszy możliwy krok ciężaru w górę.'
+      : `Górny zakres zrobiony → dziś trudniej: ${e.harder || 'wolniej w dół (4 s) albo pauza'}.`;
+  }
   return `Ostatnio (${fmt(last.d)}): ${str}. ${next}`;
 }
 const protein = d => (DAYS[d]?.food || []).reduce((a, f) => a + (+f.p || 0), 0);
 const kcal = d => (DAYS[d]?.food || []).reduce((a, f) => a + (+f.k || 0), 0);
 const kcalTarget = () => KCAL_BASE + (SET.kcalAdj || 0);
-const postureDone = D => POSTURE.filter((_, i) => postOn(D, i)).length >= POSTURE.length - 2;
+const WARM = ['chin', 'angel', 'pull']; // short warm-up on training days, full routine on rest days
+const postureDone = D => trained(D) ? WARM.every(id => postOn(D, POST_IDS.indexOf(id))) : POSTURE.filter((_, i) => postOn(D, i)).length >= POSTURE.length - 2;
 function avgW(from, to) {
   const v = Object.keys(DAYS).filter(k => k >= from && k <= to && DAYS[k].w).map(k => +DAYS[k].w);
   return v.length >= 3 ? v.reduce((a, b) => a + b, 0) / v.length : null;
@@ -538,7 +619,7 @@ async function initDb() {
       for (const doc of snap.docs) {
         const key = doc.id === 'settings' ? 'settings' : doc.id.slice(1), body = doc.data();
         if (dirty.has(key)) continue;
-        if (key === 'settings') { if (JSON.stringify(body) !== JSON.stringify(SET)) { SET = Object.assign({ trips: [], kcalAdj: 0, adjAt: '' }, clone(body)); changed = true; } }
+        if (key === 'settings') { if (JSON.stringify(body) !== JSON.stringify(SET)) { SET = Object.assign(defSet(), clone(body)); changed = true; } }
         else if (JSON.stringify(body) !== JSON.stringify(DAYS[key])) { DAYS[key] = clone(body); changed = true; }
       }
       setSync('Zsynchronizowane');
@@ -561,6 +642,8 @@ function cleanDay(v) {
   for (const f of ['creatine', 'nose']) if (v[f]) o[f] = true;
   if (num(v.w)) o.w = num(v.w);
   if (num(v.bolt)) o.bolt = num(v.bolt);
+  if (v.fin) o.fin = true;
+  for (const f of ['ew', 'extra']) if (v[f] && typeof v[f] === 'object') o[f] = Object.fromEntries(Object.entries(v[f]).filter(([k, n]) => k in EX && num(n) !== undefined).map(([k, n]) => [k, num(n)]));
   if (Array.isArray(v.food)) o.food = v.food.map(f => ({ n: String(f?.n ?? '').slice(0, 80), p: num(f?.p) || 0, k: num(f?.k) || 0 }));
   if (v.post && typeof v.post === 'object') o.post = Object.fromEntries(Object.entries(v.post).filter(([k]) => /^[\w-]+$/.test(k)).map(([k, b]) => [k, !!b]));
   if (v.sets && typeof v.sets === 'object') o.sets = Object.fromEntries(Object.entries(v.sets).filter(([k, a]) => k in EX && Array.isArray(a)).map(([k, a]) => [k, a.map(s => ({ w: num(s?.w), r: num(s?.r), ok: !!s?.ok }))]));
@@ -577,7 +660,8 @@ function importText(txt) {
   }
   const s = o.set;
   if (s && typeof s === 'object' && (num(s.u) || 0) > (SET.u || 0)) {
-    SET = { u: num(s.u), kcalAdj: num(s.kcalAdj) || 0, adjAt: /^\d{4}-\d\d-\d\d$/.test(s.adjAt) ? s.adjAt : '',
+    const pl = a => (Array.isArray(a) ? a : []).filter(x => PLATES.includes(x));
+    SET = { u: num(s.u), kcalAdj: num(s.kcalAdj) || 0, handle: num(s.handle) ?? 2, H: Array.isArray(s.H) ? pl(s.H) : defSet().H, L: Array.isArray(s.L) ? pl(s.L) : defSet().L, adjAt: /^\d{4}-\d\d-\d\d$/.test(s.adjAt) ? s.adjAt : '',
       trips: (Array.isArray(s.trips) ? s.trips : []).filter(t => t && t.eq in MODES && /^\d{4}-\d\d-\d\d$/.test(t.from) && /^\d{4}-\d\d-\d\d$/.test(t.to)).map(t => ({ from: t.from, to: t.to, eq: t.eq, label: String(t.label ?? '').slice(0, 60) })) };
     persist('settings', true);
   }
@@ -632,13 +716,22 @@ function banners(d) {
 
 const VIEWS = {
   dzis() {
-    const d = today(), n = dayNum(d), D = DAYS[d] || {}, eq = eqFor(d), ph = phaseOf(d);
+    const d = cur(), n = dayNum(d), D = DAYS[d] || {}, eq = eqFor(d), ph = phaseOf(d), isToday = d === today();
     const ses = sessionFor(d), isTrain = trainToday(d) || ui.force;
     let list = PLANS[eq][ses]; if (ui.quick) list = list.filter(x => EX[x].core);
     const p = protein(d), k = kcal(d);
     const pre = n < 1 ? `<div class="note"><b>Start ${fmt(START)}</b>Plan rusza za ${1 - n} dni.</div>` : n > DAYS_TOTAL ? '<div class="note"><b>90 dni za tobą</b>Zrób zdjęcia porównawcze i sprawdź Postępy.</div>' : '';
     const auto = DAYS[d]?.eq ? `<button class="ghost" data-eqday="auto" style="min-height:0;padding:2px 0">wróć do planu</button>` : '';
+    const wdn = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'][at(d).getDay()];
+    let lastSet = null;
+    const exHtml = list.map(x => {
+      const s = eq === 'db' && EX[x].set; let h = '';
+      if (s && s !== lastSet) { h = `<div class="setbar"><b>${lastSet ? 'Zmień talerze na' : 'Ustaw hantle'}: ${SETNAME[s]}</b><span>${esc(plateTxt(SET[s]))} → <b class="tn">${fmtKg(kgOf(s))} kg</b> na hantlę</span></div>`; lastSet = s; }
+      return h + exCard(x, d, eq);
+    }).join('');
     return `<div class="stack">
+      <div class="datebar"><button data-dnav="-1" aria-label="Poprzedni dzień">‹</button><b class="grow">${isToday ? 'Dziś' : wdn + ' ' + fmt(d)}</b><button data-dnav="1" aria-label="Następny dzień">›</button></div>
+      ${isToday ? '' : `<div class="note"><b>Przeglądasz ${fmt(d)}</b>Zmiany zapiszą się w tym dniu. <button class="ghost" data-dnav="0" style="min-height:0;padding:0;color:var(--blue)">Wróć do dziś</button></div>`}
       <div class="top"><div><div class="lbl">Dzień ${Math.min(Math.max(n, 1), DAYS_TOTAL)} z 90 · tydz. ${weekOf(d)} · ${esc(ph.name)}</div><h1>${isTrain ? esc(SES_NAME[ses]) : 'Dzień wolny'}</h1></div>
         <span class="chip"><span class="dot eq-${eq}"></span>${MODES[eq].label}</span></div>
       ${pre}
@@ -654,14 +747,15 @@ const VIEWS = {
         <div class="row"><div class="grow"><span class="lbl">Trening</span><div class="mute">${esc(eq === 'bw' ? '0–1 powt. w zapasie (małe obciążenie)' : ph.rir)}</div></div>
           <div class="seg"><button data-ses="A" class="${ses === 'A' ? 'sel' : ''}">A</button><button data-ses="B" class="${ses === 'B' ? 'sel' : ''}">B</button></div>
           <div class="seg"><button data-quick="0" class="${!ui.quick ? 'sel' : ''}">Pełny</button><button data-quick="1" class="${ui.quick ? 'sel' : ''}">15 min</button></div></div>
-        ${list.map(x => exCard(x, d, eq)).join('')}
+        ${exHtml}
+        ${D.fin ? `<div class="note" style="--c:var(--ok)"><b>Trening zakończony</b>${okCount(D)} serii · rekordy: ${prCount(d)}. Zmiany możesz dalej wprowadzać.</div>` : trained(D) ? '<button class="pri" data-fin="1">Zakończ trening</button>' : ''}
       </div>` : `<div class="card"><p>Dziś odpoczynek, zrób tylko posturę. Mięśnie rosną między treningami.</p><button data-force="1">Pokaż trening mimo to</button></div>`}
       <div class="sync" id="sync">${esc(syncMsg)}</div>
     </div>`;
   },
 
   jedzenie() {
-    const d = today(), list = DAYS[d]?.food || [], p = protein(d), k = kcal(d);
+    const d = cur(), list = DAYS[d]?.food || [], p = protein(d), k = kcal(d);
     return `<div class="stack">
       <div><div class="lbl">Bez spiny, liczy się średnia z tygodnia</div><h1>Jedzenie</h1></div>
       <div class="stats">
@@ -731,10 +825,17 @@ const VIEWS = {
     const d = today(), n = dayNum(d);
     const cells = Array.from({ length: DAYS_TOTAL }, (_, i) => {
       const x = addDays(START, i);
-      return `<div class="eq-${eqFor(x)} ${i + 1 === n ? 't' : ''} ${trained(DAYS[x]) ? 'd' : ''}" style="border-bottom-color:${eqFor(x) === 'db' ? 'transparent' : 'var(--c)'}" title="${fmt(x)} · ${MODES[eqFor(x)].label}">${i + 1}</div>`;
+      return `<button data-goto="${x}" class="eq-${eqFor(x)} ${i + 1 === n ? 't' : ''} ${trained(DAYS[x]) ? 'd' : ''}" style="border-bottom-color:${eqFor(x) === 'db' ? 'transparent' : 'var(--c)'}" title="${fmt(x)} · ${MODES[eqFor(x)].label}">${i + 1}</button>`;
     }).join('');
     return `<div class="stack">
       <div><div class="lbl">${fmt(START)}.2026 → ${fmt(addDays(START, DAYS_TOTAL - 1))}.2027</div><h1>Plan 90 dni</h1></div>
+      <div class="card"><span class="lbl">Twoje hantle</span>
+        <p class="mute">Talerze: po 4 × 1 kg, 1,25 kg i 2,5 kg, czyli na każdą stronę gryfu max jeden talerz danego rozmiaru. Ustawiasz dwa zestawy i w treningu zmieniasz talerze tylko raz: najpierw CIĘŻKIE, potem LEKKIE.</p>
+        <label class="row">Waga samego gryfu <input id="handle" data-handle="1" inputmode="decimal" value="${fmtKg(SET.handle)}" style="width:80px"> kg</label>
+        ${['H', 'L'].map(k => `<div class="stack" style="gap:6px"><h3>${SETNAME[k]}: <span class="tn">${fmtKg(kgOf(k))} kg</span> na hantlę <span class="mute">(${k === 'H' ? 'wiosłowania, wyprost nad głową' : 'barki boczne, tył barków, biceps'})</span></h3>
+          <div class="chips">${PLATES.map(pl => `<button data-plate="${k}:${pl}" class="${SET[k].includes(pl) ? 'sel' : ''}">${fmtKg(pl)} kg</button>`).join('')}<span class="mute" style="align-self:center">na każdą stronę</span></div></div>`).join('')}
+        <p class="mute">LEKKIE dobierz tak, żeby unoszenie bokiem dało się zrobić 12–15 razy z 1–2 zapasu.</p>
+      </div>
       <div class="card"><span class="lbl">Wyjazdy i sprzęt</span>
         <p class="mute">Dodaj okres, a każdy dzień w nim dostanie właściwy program. Pojedynczy dzień zmienisz w zakładce Dziś.</p>
         ${SET.trips.length ? `<div class="tw"><table>${SET.trips.map((t, i) => `<tr><td class="tn">${fmt(t.from)} – ${fmt(t.to)}</td><td><span class="dot eq-${t.eq}" style="display:inline-block"></span> ${MODES[t.eq].label}</td><td>${esc(t.label || '')}</td><td style="text-align:right"><button class="ghost" data-deltrip="${i}">Usuń</button></td></tr>`).join('')}</table></div>` : ''}
@@ -767,9 +868,10 @@ const VIEWS = {
 };
 
 function postureCard(D, isTrain) {
-  const done = POSTURE.filter((_, i) => postOn(D, i)).length;
-  return `<div class="card"><div class="row"><span class="lbl grow">${isTrain ? 'Rozgrzewka: postura · ~8 min' : 'Postura · codziennie ~8 min'}</span><span class="mute tn">${done}/${POSTURE.length}</span></div>
-    ${POSTURE.map((x, i) => `<div class="ex ${postOn(D, i) ? 'done' : ''}"><div class="exh">${demoBox(x.id)}<div class="grow">
+  const items = POSTURE.map((x, i) => [x, i]).filter(([x]) => !isTrain || WARM.includes(x.id));
+  const done = items.filter(([, i]) => postOn(D, i)).length;
+  return `<div class="card"><div class="row"><span class="lbl grow">${isTrain ? 'Rozgrzewka · 3 min (pełna postura w dni wolne)' : 'Postura · ~8 min'}</span><span class="mute tn">${done}/${items.length}</span></div>
+    ${items.map(([x, i]) => `<div class="ex ${postOn(D, i) ? 'done' : ''}"><div class="exh">${demoBox(x.id)}<div class="grow">
       <label class="row" style="gap:8px;flex-wrap:nowrap;align-items:flex-start;cursor:pointer"><input type="checkbox" id="po-${x.id}" data-post="${x.id}" ${postOn(D, i) ? 'checked' : ''} style="margin-top:2px"><h3>${esc(x.n)}</h3></label>
       <div class="dose"><span class="num">${esc(x.t)}</span></div><p class="cue">${esc(x.cue)}</p></div></div>
       <details><summary>Jak to zrobić</summary><ol>${x.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
@@ -779,45 +881,68 @@ function postureCard(D, isTrain) {
 
 function exCard(x, d, eq) {
   const e = EX[x], D = DAYS[d] || {}, cur = D.sets?.[x] || [], n = setsFor(x, d), last = lastEntry(x, d);
-  const kg = !!e.kg && eq !== 'bw';
+  const kg = !!e.kg && eq !== 'bw', lo = +e.r.split('-')[0], u = e.unit === 's' ? 's' : 'powt.';
+  const lastOk = last?.sets.filter(Boolean) || [];
   const done = cur.filter(s => s?.ok).length >= n;
-  const u = e.unit === 's' ? 's' : 'powt.';
+  const w = D.ew?.[x] ?? (e.set && eq === 'db' ? kgOf(e.set) : lastOk.at(-1)?.w ?? '');
   const rows = Array.from({ length: n }, (_, i) => {
-    const s = cur[i] || {}, l = last?.sets[i] || last?.sets.at(-1) || {};
-    return `<div class="set ${kg ? '' : 'nokg'} ${s.ok ? 'ok' : ''}"><span>${i + 1}</span>
-      ${kg ? `<input id="w-${x}-${i}" data-w="${x}" data-i="${i}" inputmode="decimal" placeholder="${l.w || 'kg'}" value="${s.w ?? ''}" aria-label="Ciężar seria ${i + 1}">` : ''}
-      <input id="r-${x}-${i}" data-r="${x}" data-i="${i}" inputmode="numeric" placeholder="${l.r || e.r}" value="${s.r ?? ''}" aria-label="${u} seria ${i + 1}">
-      <button data-ok="${x}" data-i="${i}" aria-label="Seria ${i + 1} zrobiona">✓</button></div>`;
+    const s = cur[i] || {}, r = s.r ?? last?.sets[i]?.r ?? lastOk.at(-1)?.r ?? lo;
+    return `<div class="set ${s.ok ? 'ok' : ''}"><span>${i + 1}</span>
+      <div class="step"><button data-step="-1" data-x="${x}" data-i="${i}" aria-label="Mniej">−</button><input id="r-${x}-${i}" data-r="${x}" data-i="${i}" inputmode="numeric" value="${r}" aria-label="${u} seria ${i + 1}"><button data-step="1" data-x="${x}" data-i="${i}" aria-label="Więcej">+</button></div>
+      <button class="ok" data-ok="${x}" data-i="${i}" aria-label="Seria ${i + 1} zrobiona">✓</button></div>`;
   }).join('');
+  const hist = Object.keys(DAYS).filter(k => k < d && DAYS[k].sets?.[x]?.some(s => s?.ok)).sort().slice(-5).reverse();
   return `<div class="ex ${done ? 'done' : ''}">
     <div class="exh">${demoBox(x)}<div class="grow"><h3>${esc(e.n)}</h3>
-      <div class="dose"><span class="num">${n} × ${esc(e.r.replace('-', '–'))}</span> <span>${e.unit === 's' ? 'sekund' : 'powtórzeń'}</span></div>
-      <div class="mute">przerwa ${e.rest} s${e.core ? ' · <b style="color:var(--ink)">priorytet</b>' : ''}</div>
+      <div class="dose"><span class="num">${n} × ${esc(e.r.replace('-', '–'))}</span> <span>${e.unit === 's' ? 'sekund' : 'powtórzeń'}${e.per ? ' ' + e.per : ''}</span></div>
+      <div class="mute">przerwa ${e.rest} s${e.set && eq === 'db' ? ` · hantle ${SETNAME[e.set]}` : ''}</div>
       <p class="cue">${esc(e.cue)}</p></div></div>
-    <details><summary>Jak to zrobić</summary><p style="margin-top:6px">${esc(e.how)}</p>${e.harder ? `<p class="mute">Za łatwo? ${esc(e.harder)}.</p>` : ''}
+    <details><summary>Jak to zrobić</summary>${e.steps ? `<ol>${e.steps.map(t => `<li>${esc(t)}</li>`).join('')}</ol>` : `<p style="margin-top:6px">${esc(e.how || '')}</p>`}
+      ${e.err ? `<p><b>Uważaj:</b> ${esc(e.err)}</p>` : ''}${e.harder ? `<p class="mute">Za łatwo? ${esc(e.harder)}.</p>` : ''}
       <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(e.en + ' form')}" target="_blank" rel="noopener" style="font-size:14px">Zobacz film</a></details>
+    ${hist.length ? `<details><summary>Historia</summary><table>${hist.map(k => `<tr><td class="mute">${fmt(k)}</td><td>${DAYS[k].sets[x].filter(s => s?.ok).map(s => (s.w ? fmtKg(s.w) + '×' : '') + s.r).join(', ')}</td></tr>`).join('')}</table></details>` : ''}
     <div class="hint">${esc(hint(x, d, eq))}</div>
+    ${kg ? `<label class="wrow"><span>Ciężar na hantlę</span><input id="w-${x}" data-ew="${x}" inputmode="decimal" value="${w === '' ? '' : fmtKg(w)}"> kg <span class="mute">cały czas ten sam</span></label>` : ''}
     <div class="sets">${rows}</div>
+    <button class="ghost" data-addset="${x}" style="align-self:flex-start;min-height:32px;padding:4px 0;color:var(--blue)">+ dodaj serię</button>
   </div>`;
+}
+// records = exercises beaten vs last time (more weight, or same weight and more reps)
+function prCount(d) {
+  return Object.entries(DAYS[d]?.sets || {}).filter(([x, a]) => {
+    const now = a.filter(s => s?.ok), last = lastEntry(x, d)?.sets.filter(Boolean) || [];
+    if (!now.length || !last.length) return false;
+    const best = arr => arr.reduce((b, s) => (+s.w || 0) > b.w || ((+s.w || 0) === b.w && +s.r > b.r) ? { w: +s.w || 0, r: +s.r } : b, { w: -1, r: 0 });
+    const a1 = best(now), b1 = best(last);
+    return a1.w > b1.w || (a1.w === b1.w && a1.r > b1.r);
+  }).length;
 }
 
 // ===== EVENTS =====
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  const B = b.dataset, d = today();
+  const B = b.dataset, d = cur();
   if (B.tab) { ui.tab = B.tab; cacheLS(); render(); scrollTo(0, 0); return; }
   if (B.t) { if (B.t === 'stop') tmr = null; else if (tmr) { tmr.end = Math.max(tmr.end, Date.now()) + 15000; tmr.done = false; } tickTimer(); return; }
   if (B.quick) { ui.quick = B.quick === '1'; cacheLS(); render(); return; }
   if (B.force) { ui.force = true; render(); return; }
   if (B.eqday) { const D = day(d); if (B.eqday === 'auto') delete D.eq; else D.eq = B.eqday; persist(d); render(); return; }
   if (B.ses) { day(d).ses = B.ses; persist(d); render(); return; }
+  if (B.dnav) { const nd = B.dnav === '0' ? today() : addDays(d, +B.dnav); ui.date = nd === today() ? null : nd; ui.force = false; render(); scrollTo(0, 0); return; }
+  if (B.goto) { ui.date = B.goto === today() ? null : B.goto; ui.tab = 'dzis'; ui.force = false; render(); scrollTo(0, 0); return; }
+  if (B.step) {
+    const inp = document.getElementById(`r-${B.x}-${B.i}`), v = Math.max(0, (+inp.value || 0) + +B.step);
+    inp.value = v; const arr = ((day(d).sets ||= {})[B.x] ||= []); for (let j = 0; j <= +B.i; j++) arr[j] ||= {}; arr[+B.i].r = v; persist(d); return;
+  }
+  if (B.addset) { const D = day(d); (D.extra ||= {})[B.addset] = (D.extra[B.addset] || 0) + 1; persist(d); render(); return; }
+  if (B.fin) { day(d).fin = true; tmr = null; persist(d); render(); return; }
+  if (B.plate) { const [k, v] = B.plate.split(':'), a = SET[k], i = a.indexOf(+v); i < 0 ? a.push(+v) : a.splice(i, 1); a.sort((x, y) => x - y); persist('settings'); render(); return; }
   if (B.ok) {
     const D = day(d), x = B.ok, i = +B.i, arr = ((D.sets ||= {})[x] ||= []), s = arr[i] ||= {};
     if (s.ok) { s.ok = false; persist(d); render(); return; }
-    const row = b.parentElement, wIn = row.querySelector('[data-w]'), rIn = row.querySelector('[data-r]');
-    const r = rIn.value || (rIn.placeholder.includes('-') ? '' : rIn.placeholder);
-    if (!r) { rIn.focus(); return; }
-    s.r = +r; if (wIn) s.w = +(wIn.value || wIn.placeholder.replace(/[^\d.,]/g, '').replace(',', '.')) || undefined;
+    const rIn = document.getElementById(`r-${x}-${i}`), wIn = document.getElementById(`w-${x}`);
+    if (rIn.value === '') { rIn.focus(); return; }
+    s.r = +rIn.value.replace(',', '.'); s.w = wIn ? +wIn.value.replace(',', '.') || undefined : undefined;
     s.ok = true; D.ses ||= sessionFor(d);
     for (let j = 0; j < arr.length; j++) arr[j] ||= {};
     persist(d); startTimer(EX[x].rest); keepAwake(); render(); return;
@@ -839,19 +964,22 @@ document.addEventListener('click', e => {
   if (B.deltrip) { SET.trips.splice(+B.deltrip, 1); persist('settings'); render(); return; }
 });
 document.addEventListener('change', e => {
-  const t = e.target, T = t.dataset, d = today();
+  const t = e.target, T = t.dataset, d = cur();
   if (T.flag) { day(d)[T.flag] = t.checked; persist(d); return; }
   if (T.post) { (day(d).post ||= {})[T.post] = t.checked; persist(d); render(); return; }
-  if (T.w || T.r) {
-    const D = day(d), x = T.w || T.r, arr = ((D.sets ||= {})[x] ||= []), s = arr[+T.i] ||= {};
-    for (let j = 0; j < arr.length; j++) arr[j] ||= {};
-    const v = t.value.replace(',', '.'); s[T.w ? 'w' : 'r'] = v === '' ? undefined : +v;
-    persist(d);
+  if (T.r) {
+    const D = day(d), arr = ((D.sets ||= {})[T.r] ||= []); for (let j = 0; j <= +T.i; j++) arr[j] ||= {};
+    const v = t.value.replace(',', '.'); arr[+T.i].r = v === '' ? undefined : +v; persist(d); return;
   }
+  if (T.ew) { // one weight for the whole exercise; logged sets take it too
+    const D = day(d), v = +t.value.replace(',', '.'); (D.ew ||= {})[T.ew] = v || undefined;
+    (D.sets?.[T.ew] || []).forEach(s => { if (s?.ok) s.w = v || undefined; }); persist(d); return;
+  }
+  if (T.handle) { SET.handle = +t.value.replace(',', '.') || 0; persist('settings'); render(); return; }
 });
 document.addEventListener('submit', e => {
   e.preventDefault();
-  const f = new FormData(e.target), id = e.target.id, d = today();
+  const f = new FormData(e.target), id = e.target.id, d = cur();
   if (id === 'addfood') { (day(d).food ||= []).push({ n: f.get('n').trim(), p: Math.round(+f.get('p')), k: Math.round(+f.get('k')) || 0 }); persist(d); }
   if (id === 'addw') { const k = f.get('d'); day(k).w = +(+f.get('kg')).toFixed(1); persist(k); }
   if (id === 'addbolt') { day(d).bolt = Math.round(+f.get('s')); persist(d); }
@@ -862,9 +990,8 @@ document.addEventListener('submit', e => {
   render();
 });
 
-// app left open overnight: show the new day when it comes back to front
-let shownDay = today();
-document.addEventListener('visibilitychange', () => { if (!document.hidden && today() !== shownDay) { shownDay = today(); ui.force = false; render(); } });
+// app left open overnight: show the new day when it comes back to front (not mid-workout: cur() keeps the old day until then)
+document.addEventListener('visibilitychange', () => { if (!document.hidden && today() !== shownDay && !(trained(DAYS[shownDay]) && !DAYS[shownDay].fin)) { shownDay = today(); ui.force = false; render(); } });
 
 render();
 initDb();
