@@ -93,6 +93,7 @@ input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:var(--ok);
 .set button{padding:0;min-height:44px;font-size:18px}
 .set.ok .ok{background:var(--ok);border-color:var(--ok);color:var(--surface)}
 .set.ok input{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
+.btnlike{display:inline-flex;align-items:center;min-height:40px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;font-weight:600}
 textarea{font:inherit;color:inherit;width:100%;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical}
 .wrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px}
 .wrow input{width:84px;text-align:center;font-size:18px;font-weight:600}
@@ -178,7 +179,7 @@ const EX = {
   curl: { n: 'Uginanie ramion z hantlami', en: 'dumbbell bicep curl', s: '3', r: '12-20', rest: 45, kg: 1, set: 'L', cue: 'Łokcie przy bokach, w dół przez 3 s.',
     steps: ['Stań, hantle wzdłuż ciała, dłonie przodem.', 'Łokcie przy bokach przez cały ruch.', 'Ugnij ręce i unieś hantle do barków. Na górze ściśnij biceps.', 'Opuszczaj przez 3 s do pełnego wyprostu.'],
     err: 'Bujanie tułowiem i wysuwanie łokci do przodu.' },
-  pushup: { n: 'Pompki', en: 'push up proper form', s: '3', r: '6-20', rest: 75, core: 1, cue: 'Ciało jak deska, łokcie skośnie do tyłu.', harder: 'dłonie na hantlach (głębiej) albo stopy na łóżku',
+  pushup: { n: 'Pompki', en: 'push up proper form', s: '4-5', r: '8-20', total: [50, 60], rest: 75, core: 1, cue: 'Ciało jak deska, łokcie skośnie do tyłu.', harder: 'dłonie na hantlach (głębiej) albo stopy na łóżku',
     steps: ['Dłonie trochę szerzej niż barki, ciało proste od głowy do pięt. Napnij brzuch i pośladki.', 'Opuszczaj się przez 2–3 s, łokcie idą skośnie do tyłu (ok. 45° od tułowia), nie na boki.', 'Klatka prawie dotyka podłogi.', 'Wypchnij się do wyprostu.', 'Za trudno: dłonie na łóżku. Kończ serię 1–2 powtórzenia przed upadkiem.'],
     err: 'Opadające biodra i łokcie rozłożone na boki.' },
   pike: { n: 'Pompki pike', en: 'pike push up', s: '3', r: '6-12', rest: 75, core: 1, cue: 'Biodra wysoko, głowa ląduje przed dłońmi.', harder: 'stopy na łóżku albo pauza 2 s na dole',
@@ -245,11 +246,11 @@ const EX = {
 
 // order matters: CIĘŻKIE first, then one plate change to LEKKIE
 const PLANS = {
-  db: { A: ['row2', 'pushup', 'latseat', 'rearfly', 'curl', 'revcr'], B: ['row1', 'ohtri', 'pike', 'latseat', 'hollow'] },
-  bw: { A: ['pike', 'bandrow', 'bandlat', 'bandface', 'bandcurl', 'revcr'], B: ['pushup', 'bandrow', 'bandlat', 'bandpull', 'dips', 'hollow'] },
-  gym: { A: ['pulldown', 'cablelat', 'mohp', 'cablerow', 'facepull', 'cablecurl', 'cablecr'], B: ['inclinedb', 'rowsingle', 'cablelat', 'reversefly', 'ohcable', 'hangknee'] },
+  db: { A: ['latseat', 'pushup', 'revcr'], B: ['row2', 'rearfly', 'curl', 'hollow'] },
+  bw: { A: ['bandlat', 'pushup', 'revcr'], B: ['bandrow', 'bandface', 'bandcurl', 'hollow'] },
+  gym: { A: ['cablelat', 'inclinedb', 'mohp', 'cablecr'], B: ['pulldown', 'cablerow', 'facepull', 'cablecurl', 'hangknee'] },
 };
-const SES_NAME = { A: 'A · Plecy + Barki', B: 'B · Plecy + Ramiona' };
+const SES_NAME = { A: 'A · Barki + Klatka', B: 'B · Plecy + Ramiona' };
 
 const MODES = {
   db: { label: 'Hantle', focus: 'Normalny tryb. Co tydzień pobijasz ostatni wynik: +1 powtórzenie albo następny talerz.' },
@@ -496,7 +497,7 @@ const NOTES = {
 
 // ===== DATES =====
 const iso = d => d.toLocaleDateString('sv-SE');
-const today = () => iso(new Date());
+const today = () => iso(new Date(Date.now() - 3 * 3600e3)); // the day ends at 3:00
 const at = d => new Date(d + 'T12:00:00');
 const addDays = (d, n) => iso(new Date(at(d).getTime() + n * 864e5));
 const dayNum = d => Math.round((at(d) - at(START)) / 864e5) + 1;
@@ -536,14 +537,13 @@ function eqFor(d) {
   return t ? t.eq : 'db';
 }
 const trained = D => !!D && Object.values(D.sets || {}).some(a => a.some(s => s?.ok));
-// Train unless 4 sessions already in the last 7 days or 2 days in a row; a missed session rolls to the next day.
+// A and B alternate, so each muscle rests 48 h even on back-to-back days; a rest day after 3 in a row. Missed days roll forward.
 function trainToday(d) {
   if (trained(DAYS[d])) return true;
-  const last6 = [1, 2, 3, 4, 5, 6].filter(i => trained(DAYS[addDays(d, -i)])).length;
-  return last6 < 4 && !(trained(DAYS[addDays(d, -1)]) && trained(DAYS[addDays(d, -2)]));
+  return ![1, 2, 3].every(i => trained(DAYS[addDays(d, -i)]));
 }
 const okCount = D => Object.values(D?.sets || {}).reduce((a, s) => a + s.filter(x => x?.ok).length, 0);
-const doneEnough = D => !!D && (D.fin || okCount(D) >= 8);
+const doneEnough = D => !!D && (D.fin || okCount(D) >= 6);
 function sessionFor(d) {
   if (DAYS[d]?.ses) return DAYS[d].ses;
   const prev = Object.keys(DAYS).filter(k => k < d && DAYS[k].ses && trained(DAYS[k])).sort().at(-1);
@@ -607,7 +607,7 @@ function setSync(m) { syncMsg = m; const el = document.getElementById('sync'); i
 async function initDb() {
   if (!window.claude?.use) return;
   try {
-    claude.use('sample').then(s => { ai = s; if (s && ui.tab === 'jedzenie') render(); }, () => {});
+    claude.use('sample').then(async s => { ai = s; aiImg = s && (await s.limits().catch(() => null))?.images || null; if (s && ui.tab === 'jedzenie') render(); }, () => {});
     const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
     const uid = user && await user.id();
     if (!db || !uid) return setSync('Zapis tylko na tym urządzeniu');
@@ -685,7 +685,7 @@ function importText(txt) {
 let xferMsg = '';
 
 // ===== FOOD FROM TEXT (sample capability; absent offline) =====
-let ai = null, aiState = null;
+let ai = null, aiImg = null, aiState = null;
 function aiHtml() {
   if (!aiState) return '';
   if (aiState.busy) return '<p class="mute">Liczę…</p>';
@@ -695,14 +695,23 @@ function aiHtml() {
     ${aiState.comment ? `<p>${esc(aiState.comment)}</p>` : ''}<button class="pri" data-aiadd="1">Dodaj do dnia ${fmt(cur())}</button>`;
 }
 const showAi = () => { const el = document.getElementById('aiout'); if (el) el.innerHTML = aiHtml(); };
-function askFood(txt) {
+// shrink phone photos before sending (faster, and under the size cap)
+async function shrink(file) {
+  try {
+    const bmp = await createImageBitmap(file), k = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(r => c.toBlob(b => r(b || file), 'image/jpeg', .85));
+  } catch { return file; }
+}
+function askFood(txt, imgs) {
   const d = cur();
   const prompt = `Jesteś rzeczowym dietetykiem. Rozbij opis jedzenia na pozycje i oszacuj białko (g) i kalorie (kcal) każdej, realistycznie dla polskich produktów. Niepewna porcja: przyjmij typową i napisz ją w nazwie.
 Kontekst: chłopak 20 lat, 185 cm, 66 kg, lean bulk, cel ${PROTEIN} g białka i ok. ${kcalTarget()} kcal dziennie. Na ten dzień ma już zapisane ${protein(d)} g białka i ${kcal(d)} kcal.
 Odpowiedz wyłącznie JSON: {"items":[{"n":"nazwa z porcją","p":0,"k":0}],"comment":"2–3 krótkie zdania: jak wypada dzień po dodaniu tego i jedna konkretna rada"}
-Opis: ${txt}`;
+${imgs ? 'Na zdjęciach jest to jedzenie: oszacuj porcje z wyglądu (talerz ~26 cm), uwzględnij sosy i tłuszcz. ' : ''}Opis: ${txt || '(brak, oceń ze zdjęć)'}`;
   aiState = { busy: true }; showAi();
-  ai.json(prompt, { modelTier: 'quick' }).then(o => {
+  ai.json(prompt, imgs ? { images: imgs, modelTier: 'default' } : { modelTier: 'quick' }).then(o => {
     const items = (Array.isArray(o?.items) ? o.items : []).map(f => ({ n: String(f?.n ?? '').slice(0, 80), p: Math.max(0, Math.round(+f?.p || 0)), k: Math.max(0, Math.round(+f?.k || 0)) })).filter(f => f.n);
     aiState = items.length ? { items, comment: String(o?.comment ?? '').slice(0, 600) } : { err: 'Nie znalazłem w opisie jedzenia. Napisz dokładniej.' };
   }, e => {
@@ -808,7 +817,9 @@ const VIEWS = {
       <div class="card" ${ai ? '' : 'hidden'}><span class="lbl">Opisz, co zjadłeś</span>
         <p class="mute">Napisz normalnie, Claude rozbije to na pozycje i policzy białko i kalorie. Dodaje do dnia ${fmt(d)}.</p>
         <textarea id="aitext" rows="4" placeholder="np. owsianka z 80 g płatków, pół jogurtu naturalnego, garść orzechów; 2 tosty z serem i szynką"></textarea>
-        <button class="pri" data-ai="1">Policz</button><div id="aiout">${aiHtml()}</div>
+        <div class="row"><button class="pri" data-ai="1">Policz z opisu</button>${aiImg ? `<label class="btnlike" for="aiphoto">Zdjęcie jedzenia</label><input type="file" id="aiphoto" accept="${esc(aiImg.mediaTypes.join(','))}" multiple hidden>` : ''}</div>
+        <p class="mute" ${aiImg ? '' : 'hidden'}>Zdjęcie + krótki opis (np. „2 talerze, sos śmietanowy”) daje najlepszy wynik.</p>
+        <div id="aiout">${aiHtml()}</div>
       </div>
       <div class="card"><span class="lbl">Szybkie dodawanie</span>
         <div class="chips">${FOODS.map((f, i) => `<button data-food="${i}">${esc(f[0])} <small>${f[1]} g</small></button>`).join('')}</div>
@@ -860,7 +871,7 @@ const VIEWS = {
       <div class="card"><span class="lbl">Kalorie: korekta</span>${coach}<p class="mute tn">Obecny cel: ${kcalTarget()} kcal</p></div>
       <div class="card"><span class="lbl">Tygodnie</span><div class="tw"><table>
         <tr><th>Tydz.</th><th>Treningi</th><th>Postura</th><th>Białko</th><th>Śr. waga</th></tr>
-        ${weeks.reverse().map(r => `<tr><td>${r.w} ${r.eqs.map(e => `<span class="dot eq-${e}" style="display:inline-block" title="${MODES[e].label}"></span>`).join('')}</td><td>${r.tr}/4</td><td>${r.po}/${r.n}</td><td>${r.pr}/${r.n}</td><td>${r.avg}</td></tr>`).join('')}
+        ${weeks.reverse().map(r => `<tr><td>${r.w} ${r.eqs.map(e => `<span class="dot eq-${e}" style="display:inline-block" title="${MODES[e].label}"></span>`).join('')}</td><td>${r.tr}</td><td>${r.po}/${r.n}</td><td>${r.pr}/${r.n}</td><td>${r.avg}</td></tr>`).join('')}
       </table></div><p class="mute">Postura liczy się jako zrobiona przy ${POSTURE.length - 2} z ${POSTURE.length} ćwiczeń. Białko przy min. 90% celu.</p></div>
       <div class="card"><span class="lbl">Oddech · test BOLT</span>
         <p class="mute">Siedząc, spokojny oddech nosem. Po normalnym wydechu zatkaj nos i mierz czas do pierwszej wyraźnej chęci wdechu. To nie jest test wytrzymałości. Co 2 tygodnie.</p>
@@ -902,8 +913,8 @@ const VIEWS = {
         <div class="legend"><span><span class="dot" style="background:var(--ok)"></span>trening zrobiony</span><span><span class="dot eq-bw"></span>bez sprzętu</span><span><span class="dot eq-gym"></span>siłownia</span></div></div>
       <div class="card"><span class="lbl">Diagnoza</span><p>${esc(NOTES.assess)}</p></div>
       <div class="card"><span class="lbl">Jak apka wybiera dni</span><ul>
-        <li>Cel: 4 treningi na 7 dni, A i B na zmianę. Postura codziennie.</li>
-        <li>Dziś jest trening, jeśli w ostatnich 7 dniach zrobiłeś mniej niż 4 i nie trenowałeś 2 dni z rzędu. Po 2 dniach z rzędu jest wolne, bo mięśnie rosną w przerwie.</li>
+        <li>A (barki + klatka) i B (plecy + ramiona) na zmianę, ok. 20 minut każdy. Żaden mięsień nie pracuje dwa dni pod rząd, więc każdy ma 48 h na regenerację. Barki wypadają co 2 dni.</li>
+        <li>Możesz trenować codziennie. Po 3 dniach treningu z rzędu apka daje dzień wolny. Postura codziennie.</li>
         <li>Opuściłeś trening? Przechodzi na jutro, więc nadrabiasz automatycznie.</li>
         <li>„Pokaż trening mimo to” daje następny trening z kolejki. Jak go zrobisz, liczy się normalnie. Nic się nie nadpisuje i nie zawyża postępu.</li></ul></div>
       <div class="card"><span class="lbl">Fazy</span>${PHASES.map(p => `<div><h3>${esc(p.name)} <span class="mute">tydz. ${p.w[0]}${p.w[1] > p.w[0] ? '–' + p.w[1] : ''}</span></h3><p class="mute">${esc(p.rir)}. ${esc(p.desc)}</p></div>`).join('')}</div>
@@ -944,7 +955,7 @@ function exCard(x, d, eq) {
     <div class="exh">${demoBox(x)}<div class="grow"><h3>${esc(e.n)}</h3>
       <div class="dose"><span class="num">${n} × ${esc(e.r.replace('-', '–'))}</span> <span>${e.unit === 's' ? 'sekund' : 'powtórzeń'}${e.per ? ' ' + e.per : ''}</span></div>
       <div class="mute">przerwa ${e.rest} s${e.set && eq === 'db' ? ` · hantle ${SETNAME[e.set]}` : ''}</div>
-      <p class="cue">${esc(e.cue)}</p></div></div>
+      <p class="cue">${esc(e.cue)}</p>${e.total ? `<p class="cue"><b>Cel: ${e.total[0]}–${e.total[1]} razem</b> w jak najmniejszej liczbie serii · zrobione: <b class="tn">${cur.filter(s => s?.ok).reduce((a, s) => a + (+s.r || 0), 0)}</b></p>` : ''}</div></div>
     <details><summary>Jak to zrobić</summary>${e.steps ? `<ol>${e.steps.map(t => `<li>${esc(t)}</li>`).join('')}</ol>` : `<p style="margin-top:6px">${esc(e.how || '')}</p>`}
       ${e.err ? `<p><b>Uważaj:</b> ${esc(e.err)}</p>` : ''}${e.harder ? `<p class="mute">Za łatwo? ${esc(e.harder)}.</p>` : ''}
       <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(e.en + ' form')}" target="_blank" rel="noopener" style="font-size:14px">Zobacz film</a></details>
@@ -1026,6 +1037,10 @@ document.addEventListener('change', e => {
     (D.sets?.[T.ew] || []).forEach(s => { if (s?.ok) s.w = v || undefined; }); persist(d); return;
   }
   if (T.note) { day(d).note = t.value.slice(0, 2000); persist(d); return; }
+  if (t.id === 'aiphoto' && t.files.length && ai && !aiState?.busy) {
+    const files = [...t.files].slice(0, aiImg?.maxCount || 1);
+    Promise.all(files.map(shrink)).then(b => askFood(document.getElementById('aitext').value.trim(), b)); t.value = ''; return;
+  }
   if (T.handle) { SET.handle = +t.value.replace(',', '.') || 0; persist('settings'); render(); return; }
 });
 document.addEventListener('submit', e => {
